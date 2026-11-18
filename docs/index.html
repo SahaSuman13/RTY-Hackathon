@@ -56,6 +56,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;b
 .hero p{color:var(--muted)}
 .how{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:600px){.how{grid-template-columns:1fr 1fr}}
 .how div{background:var(--panel2);border-radius:12px;padding:10px;font-size:13px}.how b{display:block;font:800 22px "Barlow Condensed";color:var(--cyan)}
+.sports{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}@media(max-width:700px){.sports{grid-template-columns:1fr 1fr}}
+.sp{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left;color:var(--ink);cursor:pointer;min-height:44px;position:relative;overflow:hidden}
+.sp small{display:block;color:var(--muted);font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase}.sp b{font:800 22px "Barlow Condensed";text-transform:uppercase;letter-spacing:.02em}
+.sp svg{position:absolute;right:8px;top:8px;width:34px;height:34px;opacity:.5;stroke:currentColor;fill:none;stroke-width:2}
+.sp.on{border-color:var(--accent);background:linear-gradient(160deg,rgba(200,240,74,.16),var(--panel))}.sp.on b{color:var(--accent)}
+.ring{--p:0;width:110px;height:110px;border-radius:50%;margin:0 auto 4px;display:grid;place-items:center;background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%),var(--line) 0)}
+.ring b{width:86px;height:86px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font:800 32px "Barlow Condensed";color:var(--ink)}
+body.running .hero{display:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 <header>
@@ -72,8 +80,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;b
 <div class="section" id="lab">
 <div class="grid">
   <div>
+    <div class="sports" id="sportCards" role="radiogroup" aria-label="Choose sport and movement"></div>
     <div class="controls">
-      <select id="sport" aria-label="Sport and movement"></select>
+      <select id="sport" aria-label="Sport and movement" hidden></select>
       <select id="hand" aria-label="Dominant side"><option value="R">Right-handed / right-footed</option><option value="L">Left-handed / left-footed</option></select>
       <button class="btn" id="cam" disabled>Live camera</button>
       <label class="btn ghost" id="uplab" style="display:inline-flex;align-items:center">Upload video<input id="file" type="file" accept="video/*" hidden></label>
@@ -171,6 +180,9 @@ const vid=$('vid'),cv=$('cv'),ctx=cv.getContext('2d');
 let pose,draw,running=false,src=null,stream=null,lastT=-1;
 let frames=[],thumbs=[],reps=[],seg=null,lastRep=-1e9,prevPt=null,prevTs=0,sp=0;
 const sel=$('sport');sel.innerHTML=Object.entries(SPORTS).map(([k,s])=>`<option value="${k}">${s.label}</option>`).join('');
+const ICON={"bowl": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M5 7c4 2 10 2 14 0M5 17c4-2 10-2 14 0\"/>", "drive": "<path d=\"M6 20l10-14 3 2-10 14z\"/><circle cx=\"18\" cy=\"18\" r=\"2\"/>", "tt": "<circle cx=\"9\" cy=\"9\" r=\"6\"/><path d=\"M13 13l6 6\"/><circle cx=\"19\" cy=\"6\" r=\"1.5\"/>", "kick": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7l4 3-1.5 5h-5L8 10z\"/>"};
+function cards(){$('sportCards').innerHTML=Object.entries(SPORTS).map(([k,v])=>{const [a,b]=v.label.split(' · ');return `<button type="button" role="radio" aria-checked="${k===sel.value}" class="sp ${k===sel.value?'on':''}" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><small>${a}</small><b>${b.replace(' (side-on)','')}</b></button>`;}).join('');}
+cards();$('sportCards').onclick=e=>{const b=e.target.closest('.sp');if(!b)return;sel.value=b.dataset.k;cards();sel.onchange();};
 const S=()=>SPORTS[sel.value],H=()=>$('hand').value;
 function setup(){$('setup').textContent='Set-up: '+S().setup;renderLive(null);}
 sel.onchange=()=>{resetSession();setup();};$('hand').onchange=resetSession;
@@ -196,7 +208,7 @@ $('stop').onclick=()=>finish();
 function stopSrc(){running=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}vid.pause();}
 
 // ---------- main loop ----------
-function loop(){running=true;const step=()=>{if(!running)return;
+function loop(){running=true;document.body.classList.add('running');const step=()=>{if(!running)return;
   if(vid.readyState>=2&&vid.currentTime!==lastT){lastT=vid.currentTime;process(performance.now());}
   requestAnimationFrame(step);};requestAnimationFrame(step);}
 
@@ -230,11 +242,16 @@ function handle(lm,W,Hh,ts){
   else if(seg&&sp<thr*.5){const k=frames.indexOf(seg.f);if(k>=0&&ts-lastRep>700)addRep(k);seg=null;}
 }
 window.RQ={feed:(lm,ts)=>handle(lm,cv.width,cv.height,ts),finish:()=>finish(),reset:()=>resetSession()};
-function labelJoints(f,s,h){ctx.font=`700 ${Math.max(16,cv.width/45)}px "Barlow Condensed"`;
-  const pts={elbow:side(h,1)+'e',fknee:side(h,0)+'k',sknee:side(h,0)+'k',kknee:side(h,1)+'k',knees:'lk'};
-  s.m.forEach(m=>{const j=pts[m.id];if(!j)return;const p=f[P[j]];let v;
-    if(m.id==='elbow'){const d=side(h,1);v=ang(J(f,d+'s'),J(f,d+'e'),J(f,d+'w'));}else if(m.id==='knees')v=ang(f[P.lh],f[P.lk],f[P.la]);else v=m.fn([f],0,h);
-    const txt=Math.round(v)+'°';ctx.fillStyle='rgba(11,15,20,.8)';const w=ctx.measureText(txt).width;ctx.fillRect(p.x+10,p.y-24,w+12,28);ctx.fillStyle='#C8F04A';ctx.fillText(txt,p.x+16,p.y-3);});}
+function labelJoints(f,s,h){const W=cv.width,fs=Math.max(18,W/40);ctx.font=`800 ${fs}px "Barlow Condensed"`;
+  const D=side(h,1),O=side(h,0);
+  const tri={elbow:[D+'s',D+'e',D+'w'],fknee:[O+'h',O+'k',O+'a'],sknee:[O+'h',O+'k',O+'a'],kknee:[D+'h',D+'k',D+'a'],knees:['lh','lk','la']};
+  s.m.forEach(m=>{const t=tri[m.id];if(!t)return;const [A,B,C]=t.map(n=>J(f,n));if(B.v<.5)return;
+    const v=ang(A,B,C);const isAngle=m.id!=='elbow'||sel.value!=='bowl';
+    const ok=isAngle?(v>=m.lo&&v<=m.hi):true;const col=!isAngle?'#4FD6E8':ok?'#5BE08A':'#FF6B6B';
+    const a1=Math.atan2(A.y-B.y,A.x-B.x),a2=Math.atan2(C.y-B.y,C.x-B.x);let d=a2-a1;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
+    const R=Math.max(28,W/28);ctx.beginPath();ctx.moveTo(B.x,B.y);ctx.arc(B.x,B.y,R,a1,a1+d,d<0);ctx.closePath();ctx.fillStyle=col+'40';ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=col;ctx.beginPath();ctx.arc(B.x,B.y,R,a1,a1+d,d<0);ctx.stroke();
+    const txt=Math.round(v)+'°',w=ctx.measureText(txt).width,x=B.x+R+8,y=B.y-R/2;
+    ctx.fillStyle='rgba(11,15,20,.88)';ctx.beginPath();ctx.roundRect(x-6,y-fs,w+12,fs+10,6);ctx.fill();ctx.fillStyle=col;ctx.fillText(txt,x,y);});}
 
 function addRep(k){const s=S(),h=H(),f=frames[k];lastRep=f.t;
   // drop any metric whose joints the model is not confident about (visibility < 0.5)
@@ -276,7 +293,7 @@ function finish(){stopSrc();$('st').textContent='Session finished';$('st').class
   const wrongDir=R.map(r=>r.vals[s.m.indexOf(weakest.m)]);const avg=mean(wrongDir);
   const fix=avg<weakest.m.lo?weakest.m.low:weakest.m.high;
   const html=`<h2>${s.label}: session report</h2>
-  <div class="stats"><div class="stat"><b>${R.length}</b><span>reps detected</span></div><div class="stat"><b>${match}%</b><span>checks in target range</span></div><div class="stat"><b>${cons}</b><span>consistency score /100</span></div></div>
+  <div class="stats"><div class="stat"><div class="ring" style="--p:100;--c:var(--cyan)"><b>${R.length}</b></div><span>reps detected</span></div><div class="stat"><div class="ring" style="--p:${match};--c:${match>=70?'var(--ok)':match>=40?'var(--warn)':'var(--bad)'}"><b>${match}%</b></div><span>checks in target range</span></div><div class="stat"><div class="ring" style="--p:${cons};--c:${cons>=70?'var(--ok)':cons>=40?'var(--warn)':'var(--bad)'}"><b>${cons}</b></div><span>consistency /100</span></div></div>
   <p class="tip">Tracking confidence: <b>${conf>.8?'high':conf>.6?'medium':'low, re-film side-on with full body visible'}</b>. Consistency = how much each angle varies rep to rep (score drops 4 points per degree of spread).</p>
   <h3>Per-metric breakdown</h3><table><thead><tr><th>Metric</th><th>Target</th><th>Average</th><th>Spread (±)</th><th>In range</th><th>Evidence</th></tr></thead><tbody>
   ${per.map(p=>`<tr><td>${p.m.name}</td><td>${p.m.lo}–${p.m.hi}${p.m.unit}</td><td class="mono">${Math.round(p.mean)}${p.m.unit}</td><td class="mono ${p.sd>8?'bad':p.sd>4?'warn':'ok'}">±${p.sd.toFixed(1)}</td><td class="mono">${p.inPct}%</td><td><span class="badge ${EV[p.m.ev][1]}">${EV[p.m.ev][0]}</span></td></tr>`).join('')}
