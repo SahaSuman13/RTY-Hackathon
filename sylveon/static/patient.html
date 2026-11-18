@@ -3,6 +3,16 @@
 <title>Sylveon · Riya</title>
 <link rel="stylesheet" href="/static/style.css">
 </head><body>
+<div id="consent" class="overlay"><div class="card" style="max-width:520px">
+  <h2>Before we start</h2>
+  <p><b>I'm Dr Kabir's AI, not a human and not Dr Kabir.</b> I help you practise what you and Dr Kabir planned, between sessions. I never diagnose or advise on medicines.</p>
+  <p>If you are ever in danger, crisis help is shown at once and is always free: <b>Tele-MANAS 14416</b>.</p>
+  <label><input type="checkbox" id="c18"> I am 18 or older</label><br>
+  <label><input type="checkbox" id="cchat"> I agree to chat with Dr Kabir's AI</label><br>
+  <label><input type="checkbox" id="cshare"> Share my check-ins and answers with Dr Kabir (you can turn this off later)</label>
+  <p><button id="cgo" disabled>Continue</button></p>
+  <p class="muted">Demo: Riya and Dr Kabir are fictional. No real patient data.</p>
+</div></div>
 <div class="split">
   <section class="phone">
     <header class="ph-head">
@@ -24,7 +34,11 @@
     <h3>Route map</h3>
     <ol id="steps" class="steps"><li data-s="what_happened">What happened</li><li data-s="trigger">Trigger</li><li data-s="feeling_body">Feeling + body</li><li data-s="need">Need underneath</li><li data-s="coping">Usual coping</li><li data-s="next_step">Healthier next step</li></ol>
     <p class="muted" id="llm"></p>
-    <p><a href="/doctor">Open Dr Kabir's dashboard →</a></p>
+    <h3>Before your next session</h3>
+    <p class="muted">Dr Kabir asked you to fill this in. The questions are shown exactly as written and scored the standard way; only Dr Kabir sees the result.</p>
+    <button id="phqopen" type="button">Open questionnaire (PHQ-9)</button>
+    <div id="phq" hidden></div>
+    <p><a href="/doctor">Open Dr Kabir's dashboard →</a> · <a href="/evidence">Evidence & guardrails →</a></p>
   </aside>
 </div>
 <script>
@@ -46,6 +60,19 @@ async function send(){const text=t.value.trim();if(!text)return;t.value='';bubbl
     if(!r.ok)throw new Error(r.status);const j=await r.json();bubble(j.reply,'ai',j.meta);trace(j.meta);}
   catch(e){bubble('Connection problem. If you are in danger, call Tele-MANAS 14416 now.','ai',{path:'crisis'});}}
 document.getElementById('f').onsubmit=e=>{e.preventDefault();send();};
+// consent gate (stored per browser for the demo)
+const cg=document.getElementById('consent'),boxes=['c18','cchat','cshare'].map(i=>document.getElementById(i));
+try{if(localStorage.getItem('sylveon-consent')==='1')cg.hidden=true;}catch(e){}
+boxes.forEach(b=>b.onchange=()=>document.getElementById('cgo').disabled=!(boxes[0].checked&&boxes[1].checked));
+document.getElementById('cgo').onclick=()=>{cg.hidden=true;try{localStorage.setItem('sylveon-consent','1');}catch(e){}};
+// PHQ-9, word for word
+document.getElementById('phqopen').onclick=async()=>{const q=await (await fetch('/api/phq9')).json();const el=document.getElementById('phq');el.hidden=false;
+  el.innerHTML=`<p><b>${q.stem}</b></p>`+q.items.map((it,i)=>`<fieldset class="q"><legend>${i+1}. ${it}</legend>${q.options.map(([l,v])=>`<label><input type="radio" name="q${i}" value="${v}"> ${l}</label>`).join(' ')}</fieldset>`).join('')+
+  `<button id="phqsend" type="button">Submit to Dr Kabir</button><p class="muted">${q.citation} No permission required to reproduce or distribute.</p><p id="phqmsg"></p>`;
+  document.getElementById('phqsend').onclick=async()=>{const a=q.items.map((_,i)=>{const r=document.querySelector(`input[name=q${i}]:checked`);return r?+r.value:null;});
+    if(a.includes(null)){document.getElementById('phqmsg').textContent='Please answer all 9 questions.';return;}
+    const r=await (await fetch('/api/phq9/riya',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers:a})})).json();
+    document.getElementById('phqmsg').textContent=r.message;if(r.crisis)bubble(r.message,'ai',{path:'crisis'});};};
 fetch('/api/history/riya').then(r=>r.json()).then(h=>h.forEach(m=>bubble(m.text,m.sender==='patient'?'me':'ai',m.meta)));
 </script>
 </body></html>

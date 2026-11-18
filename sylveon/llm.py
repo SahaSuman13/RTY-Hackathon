@@ -23,10 +23,18 @@ def _get():
     return _client
 
 
+def scrub(text: str) -> str:
+    """Remove phone numbers, emails and long digit strings before text leaves for the AI model."""
+    import re
+    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.]+", "[email]", text)
+    text = re.sub(r"(\+?\d[\d\s-]{8,}\d)", "[number]", text)
+    return text
+
+
 def _gen(prompt: str, temperature: float = 0.4) -> str:
     from google.genai import types
     r = _get().models.generate_content(
-        model=MODEL, contents=prompt,
+        model=MODEL, contents=scrub(prompt),
         config=types.GenerateContentConfig(temperature=temperature, max_output_tokens=300),
     )
     return (r.text or "").strip()
@@ -66,6 +74,15 @@ Answer with JSON only: {{"level": "none|low|medium|high"}}"""
         raw = _gen(prompt, temperature=0).strip().strip("`").replace("json", "", 1).strip()
         lvl = json.loads(raw).get("level", "").lower()
         return lvl if lvl in ("none", "low", "medium", "high") else None
+    except Exception:
+        return None
+
+
+def embed(texts: list[str]):
+    """Return one embedding per text, or None on failure."""
+    try:
+        r = _get().models.embed_content(model=os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001"), contents=texts)
+        return [e.values for e in r.embeddings]
     except Exception:
         return None
 

@@ -30,6 +30,8 @@ DEFAULT_DOCTOR = {
          ]},
     ],
     "homework": [{"id": "H1", "title": "Evening mode diary", "text": "One line each evening: what happened, which part of me showed up, what it needed."}],
+    "modes": ["Vulnerable Child", "Punitive Critic", "Detached Protector", "Healthy Adult"],
+    "healthy_adult_step": "Your Healthy Adult step from Dr Kabir: pause, name the feeling, and do one kind thing for yourself before replying to anyone.",
     "escalation": {"alert_on": ["medium", "high"], "channel": "dashboard + SMS (demo: dashboard only)"},
     "version": 1,
     "signed_off": True,

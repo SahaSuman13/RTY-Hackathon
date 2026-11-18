@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import engine, llm, redteam, store
+from . import assessment, engine, llm, redteam, store
 
 app = FastAPI(title="Sylveon")
 STATIC = Path(__file__).resolve().parent / "static"
@@ -69,6 +69,40 @@ def signoff(did: str, cfg: DoctorCfg):
     doc.update(cfg.model_dump(), version=doc["version"] + 1, signed_off=True, signed_off_at=time.time())
     store.save(d)
     return {"ok": True, "version": doc["version"]}
+
+
+@app.get("/evidence")
+def evidence_page():
+    return FileResponse(STATIC / "evidence.html")
+
+
+@app.get("/api/phq9")
+def phq9_items():
+    return {"stem": assessment.STEM, "items": assessment.ITEMS, "options": assessment.OPTIONS, "citation": assessment.CITATION}
+
+
+class Answers(BaseModel):
+    answers: list[int]
+
+
+@app.post("/api/phq9/{pid}")
+def phq9_submit(pid: str, a: Answers):
+    try:
+        res = assessment.score(a.answers)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    d = store.load()
+    d["events"].append({"patient": pid, "kind": "phq9", "ts": time.time(), **res})
+    if res["safety_flag"]:  # item 9 > 0: never wait for the next session
+        d["events"].append({"patient": pid, "kind": "safety", "ts": time.time(), "level": "medium",
+                            "text": f"PHQ-9 item 9 answered {res['item9']} (thoughts of being better off dead or self-harm)",
+                            "doctor_alerted": True, "helpline": engine.HELPLINE})
+    store.save(d)
+    # the patient sees no score or label, only thanks (and crisis help if item 9 > 0)
+    msg = "Thank you. Your answers are saved for Dr Kabir."
+    if res["safety_flag"]:
+        msg += f" You mentioned thoughts of being better off dead or hurting yourself. Please talk to someone now: {engine.HELPLINE}. Dr Kabir has been alerted."
+    return {"message": msg, "crisis": res["safety_flag"]}
 
 
 @app.get("/api/summary/{pid}")

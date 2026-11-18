@@ -11,21 +11,33 @@ Order on every patient message:
 import re
 import time
 
-from . import llm, safety, store
+from . import llm, safety, schemas, store
 
 HELPLINE = "Tele-MANAS 14416 (free, 24x7, many Indian languages)"
 
-STEPS = ["what_happened", "trigger", "feeling_body", "need", "coping", "next_step"]
-Q = {  # one question per route-map step: (english, hinglish)
-    "what_happened": ("That sounds heavy. What happened today?", "Ye kaafi heavy lag raha hai. Aaj kya hua?"),
-    "trigger": ("What was the moment it got worse?", "Kis moment pe ye sabse zyada badh gaya?"),
-    "feeling_body": ("What are you feeling right now, and where do you feel it in your body?",
-                     "Abhi andar kya feel ho raha hai, aur body mein kahan feel ho raha hai?"),
-    "need": ("When you feel this, what do you need most?", "Jab aisa lagta hai, tab tumhe sabse zyada kis cheez ki zarurat hoti hai?"),
-    "coping": ("In moments like this, what do you usually do?", "Aise moments mein tum usually kya karte ho?"),
-    "next_step": ("Thank you for walking through this. Want to try one small step your Healthy Adult can take right now?",
-                  "Thanks ye sab share karne ke liye. Ek chhota step try karein jo tumhara Healthy Adult abhi le sakta hai?"),
+# Mode-diary slots follow the STEPS schema-assessment phase (Ang et al., IJCAI-25):
+# trigger -> thoughts -> emotions + body -> behaviour -> belief ("what does this say about you?"),
+# then the mode the therapist enabled, then ONE Socratic question (SocratiQ types, Ang et al., EACL 2023),
+# then the Healthy Adult step the therapist set.
+STEPS = ["trigger", "thoughts", "feeling_body", "behaviour", "belief", "mode", "socratic", "next_step"]
+Q = {  # one question per step: (english, hinglish)
+    "trigger": ("That sounds heavy. What happened, and when did it start feeling this way?", "Ye kaafi heavy lag raha hai. Kya hua, aur kab se aisa lagne laga?"),
+    "thoughts": ("What thoughts went through your mind in that moment?", "Us moment mein dimaag mein kya thoughts aaye?"),
+    "feeling_body": ("What did you feel, and where did you notice it in your body?", "Kya feel hua, aur body mein kahan feel hua?"),
+    "behaviour": ("What did you do next, or feel like doing?", "Uske baad tumne kya kiya, ya kya karne ka mann hua?"),
+    "belief": ("If that thought were true, what would it say about you?", "Agar wo thought sach hota, to wo tumhare baare mein kya kehta?"),
+    "mode": ("Which part of you felt strongest just now: {modes}?", "Abhi tumhara kaunsa part sabse strong tha: {modes}?"),
+    "next_step": ("Thank you for walking through this. {skill} Want to try that now?",
+                  "Ye sab share karne ke liye thanks. {skill} Abhi try karein?"),
 }
+# SocratiQ question types (Paul & Elder), used one per check-in, rotating. The belief is the patient's own words.
+SOCRATIC = [
+    ("clarification", 'When you say "{b}", what does that mean to you exactly?', 'Jab tum kehte ho "{b}", uska exactly matlab kya hai tumhare liye?'),
+    ("probing assumptions", 'What makes you assume "{b}" is true?', 'Tum kyun maan rahe ho ki "{b}" sach hai?'),
+    ("probing reasons and evidence", 'What is the evidence for "{b}", and what is the evidence against it?', '"{b}" ke favour mein kya evidence hai, aur against kya hai?'),
+    ("probing implications", 'If you keep believing "{b}", what is likely to happen next?', 'Agar tum "{b}" maante rahe, to aage kya hone ki sambhavna hai?'),
+    ("probing alternative viewpoints", 'What would your Healthy Adult say about "{b}"?', 'Tumhara Healthy Adult "{b}" ke baare mein kya kahega?'),
+]
 HINGLISH = re.compile(r"\b(hai|nahi|kya|mujhe|main|mera|meri|yaar|bahut|kar|raha|rahi|hoon|kyun|aaj|kal|sab|abhi|tha|thi)\b")
 YES = re.compile(r"^\s*(ok|okay|yes|ya|haan|han|ha|sure|chalo|theek|thik|next|done|hmm|k)\b", re.I)
 
@@ -67,6 +79,10 @@ def handle(pid: str, text: str) -> dict:
     doc = db["doctors"][pat["doctor"]]
     st = _state(db, pid)
     lang = lang_of(text)
+    if lang == "hinglish":
+        st["lang"] = "hinglish"
+    elif st.get("lang") == "hinglish" and len(text.split()) <= 4:
+        lang = "hinglish"  # short English words ("chest tight", "ok") don't switch the conversation language
     intro = f"I'm {doc['name']}'s AI." if lang == "english" else f"Main {doc['name']} ka AI hoon."
     db["messages"].append({"patient": pid, "sender": "patient", "text": text, "ts": time.time()})
 
@@ -130,7 +146,7 @@ def handle(pid: str, text: str) -> dict:
             return _reply(db, pid, out, {**meta, "path": "flashcard_offer", **w})
 
     # 5. homework / approved notes -------------------------------------------------------
-    if re.search(r"\b(homework|diary|kaam|task)\b", low):
+    if re.search(r"\b(homework|home work|diary)\b", low):
         hw = doc["homework"][0]
         _event(db, pid, "homework", text=text, done=bool(re.search(r"\b(did|done|kiya|kar liya|likh)", low)))
         draft = f'{intro} Your homework from {doc["name"]}: "{hw["text"]}" Want to write tonight\'s line now?'
@@ -158,7 +174,16 @@ def handle(pid: str, text: str) -> dict:
                  else "Achha. Aaj ki baat diary mein add ho gayi, Dr Kabir dekhenge. Ab apne liye ek chhoti si achhi cheez karo.")
         out, w = _final(draft, doc, text, lang)
         return _reply(db, pid, out, {**meta, "path": "checkin_close", **w})
-    q = _t(STEPS[step], lang)
+    key = STEPS[step]
+    if key == "socratic":
+        n = sum(1 for e in db["events"] if e["patient"] == pid and e["kind"] == "checkin_done")
+        qtype, e, h = SOCRATIC[n % len(SOCRATIC)]
+        b = (st["slots"].get("belief") or st["slots"].get("thoughts") or "this")[:80]
+        q = (h if lang == "hinglish" else e).format(b=b)
+        st["slots"]["socratic_type"] = qtype
+    else:
+        q = _t(key, lang).format(modes=", ".join(doc.get("modes", ["Vulnerable Child", "Punitive Critic", "Healthy Adult"])),
+                                 skill=doc.get("healthy_adult_step", "Your Healthy Adult can name the feeling and choose one kind action."))
     st["step"] = step + 1
     draft = (f"{intro} {q}" if step == 0 else q)
     if level == "low":
@@ -187,4 +212,7 @@ def summary(pid: str) -> dict:
         "saved_questions": [e for e in ev if e["kind"] == "saved_question"],
         "own_words": own[-12:],
         "messages": len(own),
+        "phq9": [e for e in ev if e["kind"] == "phq9"],
+        # evidence = the patient's own words, excluding crisis messages and questions saved for the doctor
+        "hypotheses": schemas.hypotheses([m for m in own if m not in {e.get("text") for e in ev if e["kind"] in ("safety", "saved_question")}]),
     }
