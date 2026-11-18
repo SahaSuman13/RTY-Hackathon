@@ -64,6 +64,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;b
 .ring{--p:0;width:110px;height:110px;border-radius:50%;margin:0 auto 4px;display:grid;place-items:center;background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%),var(--line) 0)}
 .ring b{width:86px;height:86px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font:800 32px "Barlow Condensed";color:var(--ink)}
 body.running .hero{display:none}
+.guide{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,86%);background:rgba(11,15,20,.88);border:1px solid var(--line);border-radius:16px;padding:16px 18px;z-index:2;backdrop-filter:blur(6px)}
+.guide[hidden]{display:none}.gstep{font:700 11px Inter;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase}
+.gbig{font:800 30px "Barlow Condensed";text-transform:uppercase;line-height:1.05;margin:4px 0 8px}
+.guide ul{list-style:none;margin:0;padding:0;font-size:14px}.guide li{padding:3px 0}.guide li::before{content:"✕";display:inline-block;width:22px;color:var(--bad);font-weight:800}.guide li.ok::before{content:"✓";color:var(--ok)}
+.guide.drill{top:auto;bottom:70px;transform:translateX(-50%);padding:8px 14px}.guide.drill ul{display:none}.guide.drill .gbig{font-size:22px;margin:0}
 .stagebar{position:absolute;right:12px;top:12px;display:flex;gap:6px;z-index:3}
 .icon{background:rgba(11,15,20,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;min-width:44px;min-height:40px;font:700 12px Inter;cursor:pointer;padding:0 10px}
 .stage:fullscreen{aspect-ratio:auto;border-radius:0}
@@ -104,13 +109,14 @@ body.running .hero{display:none}
       <button class="btn" id="cam" disabled>Live camera</button>
       <label class="btn ghost" id="uplab" style="display:inline-flex;align-items:center">Upload video<input id="file" type="file" accept="video/*" hidden></label>
       <button class="btn ghost" id="stop">Finish &amp; report</button>
-      <label class="tag"><input type="checkbox" id="voice"> Voice cues</label>
+      <label class="tag"><input type="checkbox" id="voice" checked> Voice coach</label>
     </div>
     <div class="stage" id="stage">
       <video id="vid" playsinline muted></video>
       <canvas id="cv" width="960" height="600" aria-label="Video with skeleton overlay"></canvas>
       <div class="stagebar"><button class="icon" id="fs" type="button" aria-label="Full screen">Full screen</button><button class="icon" id="mini" type="button" aria-label="Minimise video">Minimise</button></div>
       <div class="hud"><span class="chip" id="st">Loading pose model…</span><span class="chip" id="reps">Reps 0</span><span class="chip" id="conf">Tracking –</span></div>
+      <div class="guide" id="guide" hidden aria-live="polite"><div class="gstep" id="gstep"></div><div class="gbig" id="gbig"></div><ul id="glist"></ul></div>
       <div class="cue" id="cue" aria-live="polite"></div>
     </div>
     <p class="tip" id="setup"></p>
@@ -132,6 +138,7 @@ body.running .hero{display:none}
       <select id="rspeed" aria-label="Replay speed"><option value=".25">0.25x slow-mo</option><option value=".5" selected>0.5x</option><option value="1">1x</option></select>
       <input type="range" id="rscrub" min="0" max="0" value="0" aria-label="Scrub through rep">
       <label class="tag"><input type="checkbox" id="rghost" checked> Compare with best</label>
+      <label class="tag"><input type="checkbox" id="r3d"> 3D orbit view</label>
     </div>
   </div>
   <aside class="card"><h2>How you did it &amp; how to improve</h2><p class="tip">Measured at the key moment of this rep, against your own best rep and the research target.</p><div id="kcards"><p class="empty">No rep yet.</p></div></aside>
@@ -176,7 +183,7 @@ import {PoseLandmarker,FilesetResolver,DrawingUtils} from "https://cdn.jsdelivr.
 
 // ---------- geometry ----------
 const P={nose:0,ls:11,rs:12,le:13,re:14,lw:15,rw:16,lh:23,rh:24,lk:25,rk:26,la:27,ra:28};
-const ang=(a,b,c)=>{const v1=[a.x-b.x,a.y-b.y],v2=[c.x-b.x,c.y-b.y];const d=(v1[0]*v2[0]+v1[1]*v2[1])/(Math.hypot(...v1)*Math.hypot(...v2)||1);return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI;};
+const ang=(a,b,c)=>{if(a.w&&b.w&&c.w){const u=[a.w.x-b.w.x,a.w.y-b.w.y,a.w.z-b.w.z],q=[c.w.x-b.w.x,c.w.y-b.w.y,c.w.z-b.w.z];const d=(u[0]*q[0]+u[1]*q[1]+u[2]*q[2])/(Math.hypot(...u)*Math.hypot(...q)||1);return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI;}const v1=[a.x-b.x,a.y-b.y],v2=[c.x-b.x,c.y-b.y];const d=(v1[0]*v2[0]+v1[1]*v2[1])/(Math.hypot(...v1)*Math.hypot(...v2)||1);return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI;};
 const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
 const torsoLen=f=>Math.hypot(mid(f[P.ls],f[P.rs]).x-mid(f[P.lh],f[P.rh]).x,mid(f[P.ls],f[P.rs]).y-mid(f[P.lh],f[P.rh]).y)||1;
 function facing(f){const sh=mid(f[P.ls],f[P.rs]);return Math.sign(f[P.nose].x-sh.x)||1;}
@@ -274,15 +281,38 @@ const thumbC=Array.from({length:40},()=>{const c=document.createElement('canvas'
  }catch(e){$('st').textContent='Model failed to load: '+e.message;}})();
 setup();
 
-function resetSession(){prevF=null;still=0;frames=[];reps=[];rIdx=-1;try{drawReplay();$('kcards').innerHTML='<p class="empty">No rep yet.</p>';$('rsel').innerHTML='';}catch(e){}seg=null;lastRep=-1e9;prevPt=null;$('reps').textContent='Reps 0';$('cue').textContent='';renderLive(null);}
+function resetSession(){prevF=null;gPhase='idle';gOk=0;gLast='';try{$('guide').hidden=true;}catch(e){}still=0;frames=[];reps=[];rIdx=-1;try{drawReplay();$('kcards').innerHTML='<p class="empty">No rep yet.</p>';$('rsel').innerHTML='';}catch(e){}seg=null;lastRep=-1e9;prevPt=null;$('reps').textContent='Reps 0';$('cue').textContent='';renderLive(null);}
 
 $('cam').onclick=async()=>{try{stopSrc();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:1280,height:720},audio:false});
-  vid.srcObject=stream;vid.src='';await vid.play();src='cam';resetSession();armed=false;loop();let c=3;const cd=setInterval(()=>{$('cue').textContent=c>0?`Get in position… ${c}`:'Recording: go!';if(c<0){clearInterval(cd);armed=true;$('cue').textContent='Recording: play your shot';}c--;},800);$('st').textContent='LIVE';$('st').className='chip live';}
+  vid.srcObject=stream;vid.src='';await vid.play();src='cam';resetSession();armed=false;gPhase='setup';gOk=0;loop();say(SETUPMSG());$('st').textContent='LIVE';$('st').className='chip live';}
   catch(e){$('st').textContent='Camera blocked: '+e.message;}};
-$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;stopSrc();vid.srcObject=null;vid.src=URL.createObjectURL(f);vid.loop=false;await vid.play();src='file';resetSession();loop();$('st').textContent='Analysing video';$('st').className='chip';};
+$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;stopSrc();vid.srcObject=null;vid.src=URL.createObjectURL(f);vid.loop=false;await vid.play();src='file';resetSession();armed=true;gPhase='drill';$('guide').hidden=true;loop();$('st').textContent='Analysing video';$('st').className='chip';};
 vid.onended=()=>{if(src==='file'){finish();}};
 $('stop').onclick=()=>finish();
 function stopSrc(){running=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}vid.pause();}
+
+// ---------- guided session ----------
+let gPhase='idle',gOk=0,gLast='';const DRILL_N=5;
+const FRONT=()=>['ttready','ttbh'].includes(sel.value);
+const SETUPMSG=()=>FRONT()?'Stand facing the camera, about 3 metres away, whole body in the frame.':'Stand side-on to the camera, about 3 to 4 metres away, whole body in the frame.';
+function say(t){if(t===gLast)return;gLast=t;if($('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t));}}
+function guide(f,W,Hh,ts){const g=$('guide');g.hidden=false;g.className='guide';
+  let checks;if(!f){checks=[['Whole body in frame',false],['Right distance',false],[FRONT()?'Facing the camera':'Side-on to the camera',false],['Standing still',false]];}
+  else{const xs=f.map(p=>p.x),top=f[0].y,bot=Math.max(f[27].y,f[28].y),h=(bot-top)/Hh;
+    const inF=Math.min(...xs)>W*.02&&Math.max(...xs)<W*.98&&top>Hh*.03&&bot<Hh*.98;
+    const span=Math.abs(f[11].x-f[12].x)/torsoLen(f),orient=FRONT()?span>.5:span<.45;
+    checks=[['Whole body in frame',inF],[h<.45?'Come closer':h>.9?'Step back':'Right distance',h>=.45&&h<=.9],[FRONT()?'Facing the camera':'Side-on to the camera (turn so one shoulder points at the camera)',orient],['Standing still in your ready stance',sp<.6]];}
+  const all=checks.every(c=>c[1]);gOk=all?gOk+1:0;
+  if(gPhase==='setup'){$('gstep').textContent='Step 1 of 3 · Set-up';const miss=checks.find(c=>!c[1]);$('gbig').textContent=miss?miss[0]:'Hold that…';
+    $('glist').innerHTML=checks.map(c=>`<li class="${c[1]?'ok':''}">${c[0]}</li>`).join('');if(miss)say(miss[0]);
+    if(gOk>=40){gPhase='count';let c=3;$('gstep').textContent='Step 2 of 3 · Get ready';say('Perfect. Get ready.');
+      const cd=setInterval(()=>{$('gbig').textContent=c>0?String(c):"Let's start!";if(c===0)say("Let's start");if(c<0){clearInterval(cd);gPhase='drill';armed=true;drillMsg();}c--;},900);}}
+  // in 'count' the timer drives the overlay
+}
+function drillMsg(){const g=$('guide');g.hidden=false;g.className='guide drill';const shot=S().label.split(' · ')[1].replace(' (side-on)','');
+  const n=reps.length;$('gstep').textContent=`Step 3 of 3 · Drill · rep ${Math.min(n+1,DRILL_N)} of ${DRILL_N}`;
+  $('gbig').textContent=S().static?`Take your ready stance and hold 1 second`:`Play your ${shot.toLowerCase()} now`;
+  if(n===0)say(S().static?'Take your ready stance and hold.':`Play your ${shot.toLowerCase()}.`);}
 
 // ---------- main loop ----------
 function loop(){running=true;document.body.classList.add('running');const step=()=>{if(!running)return;
@@ -295,13 +325,13 @@ function process(ts){
   ctx.drawImage(vid,0,0,W,Hh);
   const r=pose.detectForVideo(vid,ts);const lm=r.landmarks&&r.landmarks[0];
   if(!lm){$('conf').textContent='No athlete found';return;}
-  handle(lm,W,Hh,ts);
+  handle(lm,W,Hh,ts,r.worldLandmarks&&r.worldLandmarks[0]);
 }
-function handle(lm,W,Hh,ts){
-  let f=lm.map(p=>({x:p.x*W,y:p.y*Hh,v:p.visibility??1}));
+function handle(lm,W,Hh,ts,wl){
+  let f=lm.map((p,i)=>({x:p.x*W,y:p.y*Hh,v:p.visibility??1,w:wl?{x:wl[i].x,y:wl[i].y,z:wl[i].z}:null}));
   const vis0=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+f[i].v,0)/12;
-  if(vis0<.6){$('conf').textContent='Step back: full body side-on';prevF=null;return;}  // no skeleton unless the athlete is clearly in frame
-  if(prevF){const tl0=torsoLen(f);f=f.map((p,i)=>{const q=prevF[i],d=Math.hypot(p.x-q.x,p.y-q.y)/tl0;const al=Math.min(1,.25+d*6);return {x:q.x+al*(p.x-q.x),y:q.y+al*(p.y-q.y),v:p.v};});} // adaptive smoothing: steady when still, responsive when fast
+  if(vis0<.6){$('conf').textContent='Step back: full body side-on';prevF=null;if(src==='cam'&&!armed)guide(null,W,Hh,ts);return;}  // no skeleton unless the athlete is clearly in frame
+  if(prevF){const tl0=torsoLen(f);f=f.map((p,i)=>{const q=prevF[i],d=Math.hypot(p.x-q.x,p.y-q.y)/tl0;const al=Math.min(1,.25+d*6);return {x:q.x+al*(p.x-q.x),y:q.y+al*(p.y-q.y),v:p.v,w:p.w&&q.w?{x:q.w.x+al*(p.w.x-q.w.x),y:q.w.y+al*(p.w.y-q.w.y),z:q.w.z+al*(p.w.z-q.w.z)}:p.w};});} // adaptive smoothing: steady when still, responsive when fast
   prevF=f;f.t=ts;lm=f.map(p=>({x:p.x/W,y:p.y/Hh,visibility:p.v}));
   draw.drawConnectors(lm,PoseLandmarker.POSE_CONNECTIONS,{color:'#C8F04A',lineWidth:Math.max(3,W/320)});
   draw.drawLandmarks(lm,{color:'#4FD6E8',radius:Math.max(3,W/300),lineWidth:1});
@@ -318,13 +348,13 @@ function handle(lm,W,Hh,ts){
   const pt=f[P[s.track(h)]],tl=torsoLen(f);
   if(prevPt){const dt=(ts-prevTs)/1000||.033;const v=Math.hypot(pt.x-prevPt.x,pt.y-prevPt.y)/tl/dt;sp=.6*sp+.4*v;}
   prevPt=pt;prevTs=ts;
-  if(!armed)return;
+  if(!armed){if(src==='cam')guide(f,W,Hh,ts);return;}
   if(s.static){if(sp<.6)still++;else still=0;if(still>=20&&ts-lastRep>1500){addRep(frames.length-1);still=0;}return;}
   const thr=sel.value==='kick'?3:2.5;
   if(sp>thr){if(!seg)seg={max:0,k:0};if(sp>seg.max){seg.max=sp;seg.k=frames.length-1;seg.f=f;}}
   else if(seg&&sp<thr*.5){const k=frames.indexOf(seg.f);if(k>=0&&ts-lastRep>700)addRep(k);seg=null;}
 }
-window.RQ={feed:(lm,ts)=>handle(lm,cv.width,cv.height,ts),finish:()=>finish(),reset:()=>resetSession()};
+window.RQ={feed:(lm,ts)=>handle(lm,cv.width,cv.height,ts),finish:()=>finish(),reset:()=>resetSession(),cam:()=>{src='cam';armed=false;gPhase='setup';gOk=0;}};
 function labelJoints(f,s,h){const W=cv.width,fs=Math.max(18,W/40);ctx.font=`800 ${fs}px "Barlow Condensed"`;
   const D=side(h,1),O=side(h,0);
   const tri={elbow:[D+'s',D+'e',D+'w'],fknee:[O+'h',O+'k',O+'a'],sknee:[O+'h',O+'k',O+'a'],kknee:[D+'h',D+'k',D+'a'],knees:['lh','lk','la']};
@@ -337,7 +367,7 @@ function labelJoints(f,s,h){const W=cv.width,fs=Math.max(18,W/40);ctx.font=`800 
     ctx.fillStyle='rgba(11,15,20,.88)';ctx.beginPath();ctx.roundRect(x-6,y-fs,w+12,fs+10,6);ctx.fill();ctx.fillStyle=col;ctx.fillText(txt,x,y);});}
 
 function addRep(k){const s=S(),h=H(),f=frames[k];lastRep=f.t;
-  const st=Math.max(0,k-30),seq=frames.slice(st).map(fr=>fr.map(p=>({x:p.x,y:p.y,v:p.v})));
+  const st=Math.max(0,k-30),seq=frames.slice(st).map(fr=>fr.map(p=>({x:p.x,y:p.y,v:p.v,w:p.w})));
   // drop any metric whose joints the model is not confident about (visibility < 0.5)
   const need={elbow:[side(h,1)+'s',side(h,1)+'e',side(h,1)+'w'],fknee:[side(h,0)+'k',side(h,0)+'a'],sknee:[side(h,0)+'k',side(h,0)+'a'],kknee:[side(h,1)+'k',side(h,1)+'a'],knees:['lk','rk','la','ra']};
   const vals=s.m.map(m=>{if((need[m.id]||[]).some(j=>J(f,j).v<.5))return NaN;try{return m.fn(frames,k,h);}catch(e){return NaN;}});
@@ -346,6 +376,7 @@ function addRep(k){const s=S(),h=H(),f=frames[k];lastRep=f.t;
   const inR=vals.map((v,i)=>isFinite(v)&&v>=s.m[i].lo&&v<=s.m[i].hi);
   reps.push({vals,inR,vis,img,score:inR.filter(Boolean).length,seq,key:k-st});
   openReplay(reps.length-1,true);
+  if(src==='cam'){if(reps.length>=DRILL_N){$('gstep').textContent='Drill complete';$('gbig').textContent='Great work. Building your report…';say('Drill complete. Here is your report.');setTimeout(()=>{$('guide').hidden=true;finish();},2500);}else drillMsg();}
   $('reps').textContent='Reps '+reps.length;renderLive(vals);
   const hidden=s.m.filter((m,i)=>!isFinite(vals[i])).map(m=>m.name);
   const bad=s.m.findIndex((m,i)=>isFinite(vals[i])&&!inR[i]);
@@ -369,7 +400,9 @@ const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,sd=a=>{const m=mean(a);return Math
 const rc=$('rc'),rx=rc.getContext('2d');let rIdx=-1,rT=0,rPlaying=false,rLast=0;
 const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,31],[28,32]];
 function bestIdx(){let b=0;reps.forEach((r,i)=>{if(r.score>reps[b].score||(r.score===reps[b].score&&r.vis>reps[b].vis))b=i;});return b;}
-function norm(rep){const K=rep.seq[rep.key],c=mid(K[P.lh],K[P.rh]),t=torsoLen(K),dir=facing(K);
+function norm(rep){if($('r3d').checked&&rep.seq[rep.key][23].w){const th=performance.now()/2500,c=Math.cos(th),sn=Math.sin(th),S3=rc.height*.42;
+    return rep.seq.map(fr=>fr.map(p=>p.w?{x:rc.width/2+(p.w.x*c+p.w.z*sn)*S3,y:rc.height*.5+p.w.y*S3,v:p.v,w:p.w}:p));}
+  const K=rep.seq[rep.key],c=mid(K[P.lh],K[P.rh]),t=torsoLen(K),dir=facing(K);
   return rep.seq.map(fr=>fr.map(p=>({x:rc.width/2+dir*(p.x-c.x)/t*rc.height*.24,y:rc.height*.56+(p.y-c.y)/t*rc.height*.24,v:p.v})));}
 function openReplay(i,auto){rIdx=i;const b=bestIdx();$('rsel').innerHTML=reps.map((r,j)=>`<option value="${j}" ${j===i?'selected':''}>Rep ${j+1}${j===b?' (best)':''}</option>`).join('');
   $('rscrub').max=reps[i].seq.length-1;rT=0;rLast=0;rPlaying=!!auto;$('rplay').textContent=rPlaying?'Pause':'Play';kcards(i);if(rPlaying)requestAnimationFrame(rTick);else drawReplay();}
@@ -412,6 +445,7 @@ function kcards(i){const s=S(),r=reps[i],bi=bestIdx(),b=reps[bi];$('kcards').inn
   return `<div class="kcard"><div class="k">${m.name} · <span class="badge ${EV[m.ev][1]}">${EV[m.ev][0]}</span></div><div class="v ${ok?'ok':'bad'}">${Math.round(v)}${m.unit}<small>target ${m.lo}–${m.hi}${m.unit}</small></div>
   <p>${ok?'In range.':`${Math.round(gap)}${m.unit} ${v<m.lo?'below':'above'} target. ${(v<m.lo?m.low:m.high)||''}`}${vsBest}</p>${ok?'':`<p class="tip"><b>Drill:</b> ${m.drill}</p>`}<p class="tip">${m.src}</p></div>`;}).join('')+`<div class="kcard"><div class="k">Train your own model</div><p>Coach or you approve this rep as good technique. After 3 approved reps, RallyIQ learns <b>your</b> target ranges for this stroke (mean ± 2 SD) and uses them instead of the research defaults.</p><p><button class="btn" type="button" onclick="markGood(${i})">Approve rep ${i+1} as good</button> <button class="btn ghost" type="button" onclick="clearModel()">Reset model</button></p><p class="tip">Approved reps for this stroke: ${(goodStore()[sel.value]||[]).length}</p></div>`;}
 drawReplay();
+setInterval(()=>{if($('r3d').checked&&rIdx>=0&&!rPlaying)drawReplay();},50);
 $('fs').onclick=()=>{const st=$('stage');if(document.fullscreenElement)document.exitFullscreen();else if(st.requestFullscreen)st.requestFullscreen();};
 $('mini').onclick=()=>{const st=$('stage');st.classList.toggle('mini');$('mini').textContent=st.classList.contains('mini')?'Expand':'Minimise';};
 
