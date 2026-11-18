@@ -307,44 +307,50 @@ function stopSrc(){running=false;if(stream){stream.getTracks().forEach(t=>t.stop
 // ---------- guided session ----------
 let gPhase='idle',gOk=0,gLast='';const DRILL_N=5;
 const FRONT=()=>['ttready','ttbh'].includes(sel.value);
-const SETUPMSG=()=>FRONT()?'Stand facing the camera, about 3 metres away, whole body in the frame.':'Stand side-on to the camera, about 3 to 4 metres away, whole body in the frame.';
-function say(t){if(t===gLast)return;gLast=t;if($('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t));}}
+const SETUPMSG=()=>FRONT()?'Camera ki taraf face karke khade ho jao, lagbhag teen meter door. Poori body frame mein dikhni chahiye, sir se pair tak.':'Camera ke side mein khade ho jao, ek kandha camera ki taraf. Lagbhag teen se chaar meter door. Poori body frame mein honi chahiye.';
+let VOICE=null;function pickVoice(){const v=speechSynthesis.getVoices();VOICE=v.find(x=>/en-IN/i.test(x.lang))||v.find(x=>/hi-IN/i.test(x.lang))||v.find(x=>/India|Heera|Ravi|Neerja|Prabhat/i.test(x.name))||null;}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function say(t){if(t===gLast)return;gLast=t;if($('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);if(VOICE){u.voice=VOICE;u.lang=VOICE.lang;}else u.lang='en-IN';u.rate=.85;u.pitch=1;speechSynthesis.speak(u);}}
 function guide(f,W,Hh,ts){const g=$('guide');g.hidden=false;g.className='guide';
-  let checks;if(!f){checks=[['Whole body in frame',false],['Right distance',false],[FRONT()?'Facing the camera':'Side-on to the camera',false],['Standing still',false]];}
+  let checks;if(!f){checks=[['Poori body frame mein laao',false],['Sahi doori',false],[FRONT()?'Camera ki taraf face karo':'Side-on khade ho',false],['Stance mein ruk jao',false]];}
   else{const xs=f.map(p=>p.x),top=f[0].y,bot=Math.max(f[27].y,f[28].y),h=(bot-top)/Hh;
     const inF=Math.min(...xs)>W*.02&&Math.max(...xs)<W*.98&&top>Hh*.03&&bot<Hh*.98;
     const span=Math.abs(f[11].x-f[12].x)/torsoLen(f),orient=FRONT()?span>.5:span<.45;
-    checks=[['Whole body in frame',inF],[h<.45?'Come closer':h>.9?'Step back':'Right distance',h>=.45&&h<=.9],[FRONT()?'Facing the camera':'Side-on to the camera (turn so one shoulder points at the camera)',orient],['Standing still in your ready stance',sp<.6]];}
+    checks=[['Poori body frame mein laao, sir se pair tak',inF],[h<.45?'Thoda paas aao':h>.9?'Thoda peeche jao':'Sahi doori',h>=.45&&h<=.9],[FRONT()?'Camera ki taraf seedha face karo':'Side-on ho jao, ek kandha camera ki taraf',orient],['Apne ready stance mein ek second ruko',sp<.6]];}
   const all=checks.every(c=>c[1]);gOk=all?gOk+1:0;
   if(gPhase==='setup'){$('gstep').textContent='Step 1 of 3 · Set-up';const miss=checks.find(c=>!c[1]);$('gbig').textContent=miss?miss[0]:'Hold that…';
     $('glist').innerHTML=checks.map(c=>`<li class="${c[1]?'ok':''}">${c[0]}</li>`).join('');if(miss)say(miss[0]);
-    if(gOk>=40){gPhase='count';let c=3;$('gstep').textContent='Step 2 of 3 · Get ready';say('Perfect. Get ready.');
-      const cd=setInterval(()=>{$('gbig').textContent=c>0?String(c):"Let's start!";if(c===0)say("Let's start");if(c<0){clearInterval(cd);gPhase='drill';armed=true;drillMsg();}c--;},900);}}
+    if(gOk>=40){gPhase='count';let c=3;$('gstep').textContent='Step 2 of 3 · Get ready';say('Bahut badhiya. Ab ready ho jao.');
+      const cd=setInterval(()=>{$('gbig').textContent=c>0?String(c):"Let's start!";if(c===0)say('Chalo, shuru karte hain');if(c<0){clearInterval(cd);gPhase='drill';armed=true;drillMsg();}c--;},900);}}
   // in 'count' the timer drives the overlay
 }
 function drillMsg(){const g=$('guide');g.hidden=false;g.className='guide drill';const shot=S().label.split(' · ')[1].replace(' (side-on)','');
   const n=reps.length;$('gstep').textContent=`Step 3 of 3 · Drill · rep ${Math.min(n+1,DRILL_N)} of ${DRILL_N}`;
   $('gbig').textContent=S().static?`Take your ready stance and hold 1 second`:`Play your ${shot.toLowerCase()} now`;
-  if(n===0)say(S().static?'Take your ready stance and hold.':`Play your ${shot.toLowerCase()}.`);}
+  if(n===0)say(S().static?'Ready stance lo aur ek second hold karo.':`Ab apna ${shot.toLowerCase()} khelo. Aaram se, poora action.`);}
 
 // ---------- live voice + visual coach: corrects posture in real time ----------
 let lcLast=0,lcText='';
 const LC_JOINT={fknee:h=>side(h,0)+'k',sknee:h=>side(h,0)+'k',kknee:h=>side(h,1)+'k',knees:()=>'lk',elbow:h=>side(h,1)+'e',lean:()=>'ls',feet:()=>'la',hand:h=>side(h,1)+'w',head:()=>'nose'};
-const LC_SAY={fknee:['Bend the front knee less, brace it','Bend your front knee more'],sknee:['Straighten the support knee a little','Bend the support knee more'],kknee:['Extend the kicking knee','Soften the kicking knee'],
- knees:['Stand up a little, too low','Bend your knees more'],elbow:['Open the elbow, more space from the body','Bend the elbow a little'],lean:['Lean forward more, chest over the ball','Stand taller, less bend'],
- feet:['Widen your feet','Bring your feet closer'],hand:['Raise the racket hand to table height','Lower the racket hand'],head:['','Bring your head forward over the front knee']};
+const LC_SAY={fknee:['Front knee bahut zyada mud raha hai. Ghutna seedha aur strong rakho, brace karo','Front knee thoda aur modo, weight aage le jao'],
+ sknee:['Support knee thoda seedha karo','Support knee thoda aur modo, balance ke liye'],kknee:['Kicking leg ko ball pe poora seedha karo','Kicking knee thoda dheela rakho'],
+ knees:['Bahut neeche baith gaye ho, thoda upar aao','Ghutne lock mat karo. Dono knees thoda aur modo, weight panjon pe rakho'],
+ elbow:['Elbow thoda khol do, body se thodi jagah banao','Haath bilkul seedha hai. Elbow thoda modo, natural bend rakho'],
+ lean:['Thoda aage jhuko, chest ball ke upar rakho','Bahut zyada jhuk gaye ho, thoda seedhe khade ho'],
+ feet:['Pair thode aur faila lo, kandhon se thoda zyada chauda','Pair thode paas laao'],
+ hand:['Racket wala haath upar karo, table ki height tak','Racket wala haath thoda neeche karo'],head:['','Sir ko aage laao, front knee ke upar']};
 function liveCoach(f,s,h,live,ts){if(!(armed||gPhase==='setup'))return;if(sp>1.2)return; // only coach while holding a position, not mid-swing
   let worst=null;s.m.forEach((m,i)=>{const v=live[i];if(!LC_JOINT[m.id]||!isFinite(v)||(m.id==='elbow'&&sel.value==='bowl'))return;
     const gap=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;if(gap>3&&(!worst||gap>worst.gap))worst={m,v,gap,low:v<m.lo};});
-  if(!worst){if(ts-lcLast>5000&&armed){lcText='Good position. Hold it.';lcLast=ts;say(lcText);}return;}
+  if(!worst){if(ts-lcLast>6000&&armed){lcText='Bilkul sahi position. Aise hi hold karo.';lcLast=ts;say(lcText);}return;}
   const j=f[P[LC_JOINT[worst.m.id](h)]];const up=worst.low; // value too low -> increase (open/straighten/raise), too high -> decrease
-  const txt=(LC_SAY[worst.m.id][worst.low?0:1]||worst.m.name)+` (${Math.round(worst.gap)}${worst.m.unit})`;
+  const full=(LC_SAY[worst.m.id][worst.low?0:1]||worst.m.name);const txt=full.split('.')[0]+` (${Math.round(worst.gap)}${worst.m.unit})`;
   // amber arrow + bubble on the joint
   const L=Math.max(40,cv.width/16),dir=up?-1:1;ctx.save();ctx.strokeStyle='#F59E0B';ctx.fillStyle='#F59E0B';ctx.lineWidth=Math.max(4,cv.width/220);ctx.shadowColor='#F59E0B';ctx.shadowBlur=12;
   const x=j.x-L*.9,y0=j.y,y1=j.y+dir*L;ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();ctx.beginPath();ctx.moveTo(x,y1+dir*12);ctx.lineTo(x-10,y1-dir*4);ctx.lineTo(x+10,y1-dir*4);ctx.closePath();ctx.fill();
   ctx.shadowBlur=0;const fs=Math.max(15,cv.width/55);ctx.font=`700 ${fs}px Poppins`;const w=ctx.measureText(txt).width;const bx=Math.max(8,Math.min(cv.width-w-24,x-w/2)),by=Math.max(fs+10,Math.min(cv.height-10,y1+dir*(fs+16)));
   ctx.fillStyle='rgba(24,33,44,.92)';ctx.beginPath();ctx.roundRect(bx-10,by-fs-6,w+20,fs+16,10);ctx.fill();ctx.fillStyle='#FCD34D';ctx.fillText(txt,bx,by);ctx.restore();
-  if(ts-lcLast>3500||!lcText.startsWith(txt.split(' (')[0])){if(ts-lcLast>2500){lcText=txt;lcLast=ts;say(txt.replace(/\(.*\)/,'').replace(/°/g,' degrees'));if(armed)$('cue').textContent='Coach: '+txt;}}}
+  if(ts-lcLast>6000||!lcText.startsWith(txt.split(' (')[0])){if(ts-lcLast>4500){lcText=txt;lcLast=ts;say(full+`. Lagbhag ${Math.round(worst.gap)} ${worst.m.unit==='°'?'degree':'percent'} ka farak hai.`);if(armed)$('cue').textContent='Coach: '+txt;}}}
 
 // ---------- main loop ----------
 function loop(){running=true;document.body.classList.add('running');const step=()=>{if(!running)return;
@@ -407,14 +413,16 @@ function addRep(k){const s=S(),h=H(),f=frames[k];lastRep=f.t;
   const vis=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+f[i].v,0)/12;
   const img=f.th.toDataURL('image/jpeg',.8);
   const inR=vals.map((v,i)=>isFinite(v)&&v>=s.m[i].lo&&v<=s.m[i].hi);
-  reps.push({vals,inR,vis,img,score:inR.filter(Boolean).length,seq,key:k-st});
+  const msc=vals.map((v,i)=>{if(!isFinite(v))return null;const m=s.m[i],g=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;return Math.max(0,100-g*6);}).filter(x=>x!==null);const repScore=msc.length?Math.round(msc.reduce((a,b)=>a+b,0)/msc.length):0;
+  reps.push({vals,inR,vis,img,repScore,score:inR.filter(Boolean).length,seq,key:k-st});
   openReplay(reps.length-1,true);
-  if(src==='cam'){if(reps.length>=DRILL_N){$('gstep').textContent='Drill complete';$('gbig').textContent='Great work. Building your report…';say('Drill complete. Here is your report.');setTimeout(()=>{$('guide').hidden=true;finish();},2500);}else drillMsg();}
+  if(src==='cam'){if(reps.length>=DRILL_N){$('gstep').textContent='Drill complete';$('gbig').textContent='Great work. Building your report…';say('Drill poori ho gayi. Shabaash. Ab aapki report dekhte hain.');setTimeout(()=>{$('guide').hidden=true;finish();},2500);}else drillMsg();}
   $('reps').textContent='Reps '+reps.length;renderLive(vals);
   const hidden=s.m.filter((m,i)=>!isFinite(vals[i])).map(m=>m.name);
   const bad=s.m.findIndex((m,i)=>isFinite(vals[i])&&!inR[i]);
-  const cue=hidden.length&&bad<0?`Rep ${reps.length}: camera could not see ${hidden.join(', ')} clearly. Film side-on, full body.`:bad<0?`Rep ${reps.length}: all checks in range. Repeat that.`:`Rep ${reps.length}: ${advice(s.m[bad],vals[bad])}`;
-  $('cue').textContent=cue;if($('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(cue.replace(/°/g,' degrees')));}
+  const cue=`[${repScore}/100] `+(hidden.length&&bad<0?`Rep ${reps.length}: camera could not see ${hidden.join(', ')} clearly. Film side-on, full body.`:bad<0?`Rep ${reps.length}: all checks in range. Repeat that.`:`Rep ${reps.length}: ${advice(s.m[bad],vals[bad])}`);
+  {const lb=bad>=0&&LC_SAY[s.m[bad].id]?LC_SAY[s.m[bad].id][vals[bad]<s.m[bad].lo?0:1]:'';gLast='';say(`Rep ${reps.length}. Score ${repScore} out of 100. `+(bad<0?'Bahut badhiya, sab sahi. Aise hi repeat karo.':(lb||s.m[bad].name)+'.'));}
+  $('cue').textContent=cue;if(false&&$('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(cue.replace(/°/g,' degrees')));}
 }
 function advice(m,v){const d=v<m.lo?Math.round(m.lo-v):Math.round(v-m.hi);const t=v<m.lo?m.low:m.high;return `${m.name} ${Math.round(v)}${m.unit}, ${d}${m.unit} ${v<m.lo?'below':'above'} target. ${t||''}`;}
 
