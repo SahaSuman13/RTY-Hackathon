@@ -121,6 +121,7 @@ body.running .hero{display:none}
       <label class="btn ghost" id="uplab" style="display:inline-flex;align-items:center">Upload video<input id="file" type="file" accept="video/*" hidden></label>
       <button class="btn ghost" id="stop">Finish &amp; report</button>
       <label class="tag"><input type="checkbox" id="voice" checked> Voice coach</label>
+      <button class="btn ghost" id="mic" type="button">🎙 Ask coach</button>
     </div>
     <div class="stage" id="stage">
       <video id="vid" playsinline muted></video>
@@ -131,6 +132,7 @@ body.running .hero{display:none}
     </div>
     <div class="guide" id="guide" hidden aria-live="polite"><div class="gstep" id="gstep"></div><div class="gbig" id="gbig"></div><ul id="glist"></ul></div>
     <div class="cue" id="cue" aria-live="polite"></div>
+    <div class="cue" id="chat" hidden></div>
     <p class="tip" id="setup"></p>
   </div>
   <aside class="card">
@@ -200,7 +202,7 @@ const ang=(a,b,c)=>{if(a.w&&b.w&&c.w){const u=[a.w.x-b.w.x,a.w.y-b.w.y,a.w.z-b.w
 const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
 const torsoLen=f=>Math.hypot(mid(f[P.ls],f[P.rs]).x-mid(f[P.lh],f[P.rh]).x,mid(f[P.ls],f[P.rs]).y-mid(f[P.lh],f[P.rh]).y)||1;
 function facing(f){const sh=mid(f[P.ls],f[P.rs]);return Math.sign(f[P.nose].x-sh.x)||1;}
-function lean(f){const sh=mid(f[P.ls],f[P.rs]),hp=mid(f[P.lh],f[P.rh]);const dx=(sh.x-hp.x)*facing(f),dy=hp.y-sh.y;return Math.atan2(dx,dy)*180/Math.PI;} // + = leaning forward
+function lean(f){const a=f[P.ls].w,b=f[P.rs].w,c=f[P.lh].w,d=f[P.rh].w;if(a&&b&&c&&d){const sz=(a.z+b.z)/2,sy=(a.y+b.y)/2,hz=(c.z+d.z)/2,hy=(c.y+d.y)/2;return Math.atan2(hz-sz,hy-sy)*180/Math.PI;}const sh=mid(f[P.ls],f[P.rs]),hp=mid(f[P.lh],f[P.rh]);const dx=(sh.x-hp.x)*facing(f),dy=hp.y-sh.y;return Math.atan2(dx,dy)*180/Math.PI;} // + = leaning forward
 const side=(h,dom)=>dom?(h==='R'?'r':'l'):(h==='R'?'l':'r'); // dom side vs other side
 const J=(f,n)=>f[P[n]];
 
@@ -236,13 +238,13 @@ const SPORTS={
  ttbh:{label:"Table tennis · Backhand drive",track:h=>side(h,1)+'w',moment:"ball contact",setup:"Film from the front or 45°, whole body visible. Play or shadow 5+ backhands.",
   m:[{id:"elbow",name:"Elbow at contact",unit:"°",lo:80,hi:140,max:180,minv:30,ev:"COACH",src:"Framework §3: elbow naturally bent, used as a stable pivot",
       fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w'));},low:"Elbow too tight to the body.",high:"Over-extending the arm. Keep it compact.",drill:"Elbow-pivot backhands against a wall, 3×30."},
-     {id:"knees",name:"Knees bent",unit:"°",lo:120,hi:165,max:180,minv:90,ev:"COACH",src:"Framework §1/§3: knees bent, not locked",
+     {id:"knees",name:"Knees bent",unit:"°",lo:120,hi:155,max:180,minv:90,ev:"COACH",src:"Framework §1/§3: knees bent, not locked",
       fn:(F,k)=>{const f=F[k];return (ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2;},low:"Too low.",high:"Knees locked. Bend them.",drill:"Ready-stance holds, 4×20 s."},
      {id:"lean",name:"Upper body forward",unit:"°",lo:8,hi:35,max:60,minv:-20,ev:"COACH",src:"Framework §3: upper body slightly forward",fn:(F,k)=>lean(F[k]),low:"Standing too upright.",high:"Bending over too much.",drill:"Mirror holds of the backhand ready position, 3×20 s."},
      {id:"stab",name:"Shoulder stability",unit:"%",lo:0,hi:30,max:80,ev:"COACH",src:"Framework §3: keep the shoulders relatively stable",
       fn:(F,k)=>{const w=F.slice(Math.max(0,k-12),Math.min(F.length,k+4)).map(f=>Math.abs(f[P.ls].x-f[P.rs].x)/torsoLen(f)*100);return Math.max(...w)-Math.min(...w);},low:"",high:"Shoulders swinging. Let the forearm do the work.",drill:"Backhand with a ball held under the playing arm, 3×20."}]},
  ttready:{label:"Table tennis · Ready stance",static:true,track:h=>side(h,1)+'w',moment:"held posture",setup:"Face the camera (front view), whole body visible. Take your ready stance and hold still 1 second; repeat 5 times.",
-  m:[{id:"knees",name:"Knees bent, not locked",unit:"°",lo:120,hi:165,max:180,minv:90,ev:"COACH",src:"Framework §1: penalise completely straight knees",
+  m:[{id:"knees",name:"Knees bent, not locked",unit:"°",lo:120,hi:155,max:180,minv:90,ev:"COACH",src:"Framework §1: penalise completely straight knees",
       fn:(F,k)=>{const f=F[k];return (ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2;},low:"Too deep, you will be slow to move.",high:"Knees locked. Bend them, weight on the balls of the feet.",drill:"Ready-stance holds, 4×20 s."},
      {id:"feet",name:"Feet width vs shoulders",unit:"%",lo:100,hi:220,max:260,ev:"COACH",src:"Framework §1: feet slightly wider than shoulder-width (front camera)",
       fn:(F,k)=>{const f=F[k];return Math.abs(f[P.la].x-f[P.ra].x)/(Math.abs(f[P.ls].x-f[P.rs].x)||1)*100;},low:"Feet too narrow. Widen to just beyond shoulder width.",high:"Feet too wide.",drill:"Tape two marks just outside shoulder width and step into them, 10×."},
@@ -341,7 +343,9 @@ const LC_SAY={fknee:['Front knee bahut zyada mud raha hai. Ghutna seedha aur str
  hand:['Racket wala haath upar karo, table ki height tak','Racket wala haath thoda neeche karo'],head:['','Sir ko aage laao, front knee ke upar']};
 function liveCoach(f,s,h,live,ts){if(!(armed||gPhase==='setup'))return;if(sp>1.2)return; // only coach while holding a position, not mid-swing
   let worst=null;s.m.forEach((m,i)=>{const v=live[i];if(!LC_JOINT[m.id]||!isFinite(v)||(m.id==='elbow'&&sel.value==='bowl'))return;
-    const gap=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;if(gap>3&&(!worst||gap>worst.gap))worst={m,v,gap,low:v<m.lo};});
+    const gap=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;if(gap>1&&(!worst||gap>worst.gap))worst={m,v,gap,low:v<m.lo};});
+  const seen=s.m.filter((m,i)=>LC_JOINT[m.id]&&!(m.id==='elbow'&&sel.value==='bowl')).every(m=>isFinite(live[s.m.indexOf(m)]));
+  if(!worst&&!seen){if(ts-lcLast>6000){lcLast=ts;say('Aapke joints saaf nahi dikh rahe. Poori body frame mein laao.');}return;}
   if(!worst){if(ts-lcLast>6000&&armed){lcText='Bilkul sahi position. Aise hi hold karo.';lcLast=ts;say(lcText);}return;}
   const j=f[P[LC_JOINT[worst.m.id](h)]];const up=worst.low; // value too low -> increase (open/straighten/raise), too high -> decrease
   const full=(LC_SAY[worst.m.id][worst.low?0:1]||worst.m.name);const txt=full.split('.')[0]+` (${Math.round(worst.gap)}${worst.m.unit})`;
@@ -351,6 +355,25 @@ function liveCoach(f,s,h,live,ts){if(!(armed||gPhase==='setup'))return;if(sp>1.2
   ctx.shadowBlur=0;const fs=Math.max(15,cv.width/55);ctx.font=`700 ${fs}px Poppins`;const w=ctx.measureText(txt).width;const bx=Math.max(8,Math.min(cv.width-w-24,x-w/2)),by=Math.max(fs+10,Math.min(cv.height-10,y1+dir*(fs+16)));
   ctx.fillStyle='rgba(24,33,44,.92)';ctx.beginPath();ctx.roundRect(bx-10,by-fs-6,w+20,fs+16,10);ctx.fill();ctx.fillStyle='#FCD34D';ctx.fillText(txt,bx,by);ctx.restore();
   if(ts-lcLast>6000||!lcText.startsWith(txt.split(' (')[0])){if(ts-lcLast>4500){lcText=txt;lcLast=ts;say(full+`. Lagbhag ${Math.round(worst.gap)} ${worst.m.unit==='°'?'degree':'percent'} ka farak hai.`);if(armed)$('cue').textContent='Coach: '+txt;}}}
+
+// ---------- talk to the coach (answers ONLY from measured numbers; no LLM, no invented facts) ----------
+let lastLive=null;
+function answer(q){q=q.toLowerCase();const s=S(),R=reps;
+  if(/score|marks|number|kitna/.test(q)){if(!R.length)return 'Abhi koi rep nahi hua. Pehle shot khelo.';const r=R[R.length-1];return `Last rep ka score ${r.repScore} out of 100 hai. Total ${R.length} reps hue.`;}
+  if(/galat|wrong|mistake|kya sudhar|improve|fix|problem|kaise/.test(q)){const v=lastLive||(R.length?R[R.length-1].vals:null);if(!v)return 'Abhi data nahi hai. Camera ke saamne aao.';
+    const bad=s.m.map((m,i)=>({m,v:v[i]})).filter(x=>isFinite(x.v)&&(x.v<x.m.lo||x.v>x.m.hi));if(!bad.length)return 'Abhi sab measured checks target range mein hain.';
+    return bad.map(x=>`${x.m.name}: ${Math.round(x.v)}${x.m.unit==='°'?' degree':' percent'}, target ${x.m.lo} se ${x.m.hi}. ${(LC_SAY[x.m.id]||[])[x.v<x.m.lo?0:1]||((x.v<x.m.lo?x.m.low:x.m.high)||'')}`).join('. ');}
+  if(/drill|practice|abhyas/.test(q)){const v=R.length?R[R.length-1].vals:lastLive;const i=v?s.m.findIndex((m,j)=>isFinite(v[j])&&(v[j]<m.lo||v[j]>m.hi)):-1;return i>=0?`Drill: ${s.m[i].drill}`:'Abhi koi weak point nahi mila. Same action 5 baar repeat karo.';}
+  if(/position|stance|kaise khade|setup|khada/.test(q))return SETUPMSG()+' '+s.setup;
+  if(/source|research|kyun|why|proof/.test(q))return s.m.map(m=>`${m.name}: ${m.src}`).join('. ');
+  if(/best|accha/.test(q)){if(!R.length)return 'Abhi koi rep nahi hua.';const b=bestIdx();return `Aapka best rep number ${b+1} tha, score ${R[b].repScore}.`;}
+  return 'Main ye pooch sakte ho: mera score kya hai, kya galat hai, kaunsi drill karun, kaise khada houn, ya research source kya hai.';}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+$('mic').onclick=()=>{if(!SR){$('chat').hidden=false;$('chat').textContent='Is browser mein voice input nahi hai. Chrome ya Edge use karo.';return;}
+  const r=new SR();r.lang='en-IN';r.interimResults=false;$('mic').textContent='🎙 Sun raha hoon…';
+  r.onresult=e=>{const q=e.results[0][0].transcript,a=answer(q);$('chat').hidden=false;$('chat').innerHTML=`<b>Aap:</b> ${q}<br><b>Coach:</b> ${a}`;gLast='';say(a);};
+  r.onend=()=>{$('mic').textContent='🎙 Ask coach';};r.onerror=()=>{$('mic').textContent='🎙 Ask coach';};r.start();};
+window.RQask=q=>answer(q);
 
 // ---------- main loop ----------
 function loop(){running=true;document.body.classList.add('running');const step=()=>{if(!running)return;
@@ -381,7 +404,7 @@ function handle(lm,W,Hh,ts,wl){
   const s=S(),h=H();
   const live=s.m.map(m=>{try{return m.fn(frames,frames.length-1,h);}catch(e){return NaN;}});
   labelJoints(f,s,h);
-  liveCoach(f,s,h,live,ts);
+  lastLive=live;liveCoach(f,s,h,live,ts);
   if(!reps.length)renderLive(live,true);
   // rep detection: peak speed of tracked joint (torso-lengths per second)
   const pt=f[P[s.track(h)]],tl=torsoLen(f);
