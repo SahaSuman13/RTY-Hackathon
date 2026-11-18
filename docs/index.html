@@ -317,8 +317,8 @@ function guide(f,W,Hh,ts){const g=$('guide');g.hidden=false;g.className='guide';
   let checks;if(!f){checks=[['Poori body frame mein laao',false],['Sahi doori',false],[FRONT()?'Camera ki taraf face karo':'Side-on khade ho',false],['Stance mein ruk jao',false]];}
   else{const xs=f.map(p=>p.x),top=f[0].y,bot=Math.max(f[27].y,f[28].y),h=(bot-top)/Hh;
     const inF=Math.min(...xs)>W*.02&&Math.max(...xs)<W*.98&&top>Hh*.03&&bot<Hh*.98;
-    const span=Math.abs(f[11].x-f[12].x)/torsoLen(f),orient=FRONT()?span>.5:span<.45;
-    checks=[['Poori body frame mein laao, sir se pair tak',inF],[h<.45?'Thoda paas aao':h>.9?'Thoda peeche jao':'Sahi doori',h>=.45&&h<=.9],[FRONT()?'Camera ki taraf seedha face karo':'Side-on ho jao, ek kandha camera ki taraf',orient],['Apne ready stance mein ek second ruko',sp<.6]];}
+    const span=Math.abs(f[11].x-f[12].x)/torsoLen(f),orient=FRONT()?span>.5:span<.45;const cx=(f[23].x+f[24].x)/2/W,cen=cx>.3&&cx<.7;
+    checks=[['Poori body frame mein laao, sir se pair tak',inF],[h<.45?'Thoda paas aao':h>.9?'Thoda peeche jao':'Sahi doori',h>=.45&&h<=.9],[FRONT()?'Camera ki taraf seedha face karo':'Side-on ho jao, ek kandha camera ki taraf',orient],[cen?'Frame ke beech mein ho':(cx<=.3?'Thoda right jao, frame ke beech mein aao':'Thoda left jao, frame ke beech mein aao'),cen],['Apne ready stance mein ek second ruko',sp<.6]];}
   const all=checks.every(c=>c[1]);gOk=all?gOk+1:0;
   if(gPhase==='setup'){$('gstep').textContent='Step 1 of 3 · Set-up';const miss=checks.find(c=>!c[1]);$('gbig').textContent=miss?miss[0]:'Hold that…';
     $('glist').innerHTML=checks.map(c=>`<li class="${c[1]?'ok':''}">${c[0]}</li>`).join('');if(miss)say(miss[0]);
@@ -359,6 +359,15 @@ function liveCoach(f,s,h,live,ts){if(!(armed||gPhase==='setup'))return;if(sp>1.2
 // ---------- talk to the coach (answers ONLY from measured numbers; no LLM, no invented facts) ----------
 let lastLive=null;
 function answer(q){q=q.toLowerCase();const s=S(),R=reps;
+  if(/nahi (mod|bend|kar|ho)|can'?t|cannot|not able|dard|pain|takleef|mushkil/.test(q)){const v=lastLive;if(!v)return 'Pehle camera ke saamne position lo, phir batao.';
+    let w=null;s.m.forEach((m,i)=>{if(!isFinite(v[i]))return;const g=v[i]<m.lo?m.lo-v[i]:v[i]>m.hi?v[i]-m.hi:0;if(g>0&&(!w||g>w.g))w={m,i,g};});
+    if(!w)return 'Aap abhi target range mein ho. Koi badlav nahi chahiye.';
+    const old=`${w.m.lo} se ${w.m.hi}`;if(v[w.i]<w.m.lo)w.m.lo=Math.floor(v[w.i]-3);else w.m.hi=Math.min(w.m.max,Math.ceil(v[w.i]+3));w.m.ev='TRAINED';w.m.src='Adjusted for you after you said you cannot go further. '+(w.m.src0||'');renderLive(v);
+    return `Theek hai. ${w.m.name} ka target aapke liye ${old} se badal kar ${w.m.lo} se ${w.m.hi} kar diya. Zabardasti mat karo. Agar dard hai toh ruk jao aur coach ya doctor se baat karo.`;}
+  if(/sahi|correct|theek hai kya|is this|right position|actual|ye position/.test(q)){const v=lastLive;if(!v)return 'Abhi aap dikh nahi rahe.';
+    const bad=s.m.map((m,i)=>({m,v:v[i]})).filter(x=>isFinite(x.v)&&(x.v<x.m.lo||x.v>x.m.hi));const unseen=s.m.filter((m,i)=>!isFinite(v[i]));
+    if(unseen.length)return `Pakka nahi bata sakta, ${unseen.map(m=>m.name).join(', ')} dikh nahi raha.`;
+    return bad.length?`Nahi, abhi ${bad.length} cheez target se bahar hai: `+bad.map(x=>`${x.m.name} ${Math.round(x.v)}, target ${x.m.lo} se ${x.m.hi}`).join('. '):'Haan, abhi aapki position sab measured checks mein sahi hai.';}
   if(/score|marks|number|kitna/.test(q)){if(!R.length)return 'Abhi koi rep nahi hua. Pehle shot khelo.';const r=R[R.length-1];return `Last rep ka score ${r.repScore} out of 100 hai. Total ${R.length} reps hue.`;}
   if(/galat|wrong|mistake|kya sudhar|improve|fix|problem|kaise/.test(q)){const v=lastLive||(R.length?R[R.length-1].vals:null);if(!v)return 'Abhi data nahi hai. Camera ke saamne aao.';
     const bad=s.m.map((m,i)=>({m,v:v[i]})).filter(x=>isFinite(x.v)&&(x.v<x.m.lo||x.v>x.m.hi));if(!bad.length)return 'Abhi sab measured checks target range mein hain.';
