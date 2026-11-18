@@ -3,17 +3,17 @@
 <title>RallyIQ · Technique Lab</title>
 <meta name="description" content="Phone-camera technique analysis for athletes without a coach: skeleton, joint angles, rep consistency, research-backed target ranges and drills.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#F5F2ED;--panel:#FFFFFF;--panel2:#EEF5F3;--line:#E3DED5;--ink:#1B2430;--muted:#56616E;--accent:#0D7C72;--btn:#1B2430;--btn-h:#2C3746;--accent-ink:#FFFFFF;--cyan:#0D7C72;--amber:#22A699;--teal:#2DD4BF;--navy:#18212C;--ok:#15803D;--warn:#B45309;--bad:#DC2626;--r:18px}
-*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(900px 500px at 90% -10%,rgba(45,212,191,.22),transparent 60%),var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
-h1,h2,h3{font-family:"Barlow Condensed",sans-serif;letter-spacing:.02em;margin:0;text-transform:uppercase}
+*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(900px 500px at 90% -10%,rgba(45,212,191,.22),transparent 60%),var(--bg);color:var(--ink);font:15px/1.5 Poppins,system-ui,sans-serif}
+h1,h2,h3{font-family:Poppins,sans-serif;font-weight:700;letter-spacing:-.01em;margin:0}
 a{color:var(--cyan)}.mono{font-family:"JetBrains Mono",monospace}
 header{background:rgba(255,255,255,.7);backdrop-filter:blur(8px);position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.logo{font:800 28px "Barlow Condensed";letter-spacing:.04em}.logo b{color:var(--accent)}
+.logo{font:800 28px Poppins;letter-spacing:.04em}.logo b{color:var(--accent)}
 .tag{color:var(--muted);font-size:13px}
 nav{margin-left:auto;display:flex;gap:6px}
-nav button,.seg button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:600 13px Inter;cursor:pointer;min-height:40px}
+nav button,.seg button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:600 13px Poppins;cursor:pointer;min-height:40px}
 nav button.on,.seg button.on{background:var(--btn);color:#fff;border-color:var(--btn)}
 .btn:hover:not(:disabled){background:var(--btn-h);transform:translateY(-1px)}.btn.ghost:hover{background:var(--panel2)}
 .sp{transition:border-color .2s,transform .2s,box-shadow .2s}.sp:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 10px 28px rgba(13,124,114,.16)}
@@ -23,56 +23,56 @@ main{max-width:1280px;margin:0 auto;padding:16px}
 @media(max-width:900px){.grid{grid-template-columns:1fr}nav{margin-left:0}}
 .card{box-shadow:0 6px 20px rgba(24,33,44,.06);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
-select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:500 14px Inter;min-height:40px}
-.btn{border-radius:999px!important;background:var(--btn);color:#fff;transition:background .15s,transform .15s;border:0;border-radius:10px;padding:10px 16px;font:700 14px Inter;cursor:pointer;min-height:42px}
+select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:500 14px Poppins;min-height:40px}
+.btn{border-radius:999px!important;background:var(--btn);color:#fff;transition:background .15s,transform .15s;border:0;border-radius:10px;padding:10px 16px;font:700 14px Poppins;cursor:pointer;min-height:42px}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .stage{position:relative;background:var(--navy);box-shadow:0 18px 40px rgba(24,33,44,.18);border-radius:var(--r);overflow:hidden;aspect-ratio:16/10;display:grid;place-items:center}
 .stage canvas{width:100%;height:100%;object-fit:contain;display:block}
 .stage video{display:none}
 .hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap}
-.chip{color:#F1F5FB;background:rgba(10,16,32,.78);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font:600 12px Inter;backdrop-filter:blur(4px)}
+.chip{color:#F1F5FB;background:rgba(10,16,32,.78);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font:600 12px Poppins;backdrop-filter:blur(4px)}
 .chip.live{color:var(--bad)}.chip.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:6px}
-.cue{position:static;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;font:700 20px "Barlow Condensed";letter-spacing:.02em;text-transform:uppercase;min-height:20px}
+.cue{position:static;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;font:700 20px Poppins;letter-spacing:.02em;text-transform:uppercase;min-height:20px}
 .cue:empty{display:none}
 .empty{color:var(--muted);text-align:center;padding:24px;font-size:14px;max-width:420px}
 .metric{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .metric:last-child{border-bottom:0}
-.metric .name{font-weight:600}.metric .val{font:700 26px "Barlow Condensed";text-align:right}
+.metric .name{font-weight:600}.metric .val{font:700 26px Poppins;text-align:right}
 .metric .rng{color:var(--muted);font-size:12px}.metric .src{font-size:11px;color:var(--muted);text-align:right}
 .bar{grid-column:1/-1;height:8px;background:var(--panel2);border-radius:99px;position:relative;margin-top:4px}
 .bar .band{position:absolute;top:0;bottom:0;background:rgba(34,197,94,.28);border-radius:99px}
 .bar .dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:var(--ink);border:3px solid var(--bg);transform:translateX(-50%);transition:left .15s}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
-.stat{background:var(--panel2);border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font:800 34px "Barlow Condensed";color:var(--ink)}.stat span{color:var(--muted);font-size:12px}
+.stat{background:var(--panel2);border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font:800 34px Poppins;color:var(--ink)}.stat span{color:var(--muted);font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-weight:500}
 .cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cmp figure{margin:0}.cmp img{width:100%;border-radius:10px;border:2px solid var(--line)}.cmp .best img{border-color:var(--ok)}.cmp .worst img{border-color:var(--bad)}
 .cmp figcaption{font-size:13px;margin-top:6px}
 .drill{background:var(--panel2);border-left:4px solid var(--cyan);border-radius:10px;padding:10px 12px;margin:8px 0}
-.badge{display:inline-block;font:700 11px Inter;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.badge{display:inline-block;font:700 11px Poppins;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
 .section[hidden]{display:none}
 .tip{color:var(--muted);font-size:13px;margin:8px 0 0}
 .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:16px}@media(max-width:900px){.hero{grid-template-columns:1fr}}
 .hero h1{font-size:52px;color:var(--navy);line-height:1}.hero h1 em{color:var(--amber);font-style:normal}
 .hero p{color:var(--muted)}
 .how{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:600px){.how{grid-template-columns:1fr 1fr}}
-.how div{background:var(--navy);color:#E6EDF3;border-radius:12px;padding:10px;font-size:13px}.how b{display:block;font:800 22px "Barlow Condensed";color:var(--teal)}
+.how div{background:var(--navy);color:#E6EDF3;border-radius:12px;padding:10px;font-size:13px}.how b{display:block;font:800 22px Poppins;color:var(--teal)}
 .sports{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}@media(max-width:700px){.sports{grid-template-columns:1fr 1fr}}
 .sp{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left;color:var(--ink);cursor:pointer;min-height:44px;position:relative;overflow:hidden}
-.sp small{display:block;color:var(--muted);font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase}.sp b{font:800 22px "Barlow Condensed";text-transform:uppercase;letter-spacing:.02em}
+.sp small{display:block;color:var(--muted);font:600 11px Poppins;letter-spacing:.08em;text-transform:uppercase}.sp b{font:700 17px Poppins;display:block;padding-right:36px;line-height:1.25}
 .sp svg{position:absolute;right:8px;top:8px;width:34px;height:34px;opacity:.5;stroke:currentColor;fill:none;stroke-width:2}
 .sp.on{border-color:var(--accent);background:linear-gradient(160deg,rgba(45,212,191,.22),var(--panel));box-shadow:0 0 0 1px var(--accent) inset}.sp.on b{color:var(--accent)}
 .ring{--p:0;width:110px;height:110px;border-radius:50%;margin:0 auto 4px;display:grid;place-items:center;background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%),var(--line) 0)}
-.ring b{width:86px;height:86px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font:800 32px "Barlow Condensed";color:var(--ink)}
+.ring b{width:86px;height:86px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font:800 32px Poppins;color:var(--ink)}
 body.running .hero{display:none}
 .guide{position:static;margin-top:12px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:4px 18px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;z-index:2;backdrop-filter:blur(6px)}
-.guide[hidden]{display:none}.guide ul{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}@media(max-width:700px){.guide{grid-template-columns:1fr}.guide ul{grid-column:1;grid-row:auto}}.gstep{font:700 11px Inter;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase}
-.gbig{font:800 30px "Barlow Condensed";text-transform:uppercase;line-height:1.05;margin:4px 0 8px}
+.guide[hidden]{display:none}.guide ul{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}@media(max-width:700px){.guide{grid-template-columns:1fr}.guide ul{grid-column:1;grid-row:auto}}.gstep{font:700 11px Poppins;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase}
+.gbig{font:800 30px Poppins;text-transform:uppercase;line-height:1.05;margin:4px 0 8px}
 .guide ul{list-style:none;margin:0;padding:0;font-size:14px}.guide li{padding:3px 0}.guide li::before{content:"✕";display:inline-block;width:22px;color:var(--bad);font-weight:800}.guide li.ok::before{content:"✓";color:var(--ok)}
 .guide.drill{grid-template-columns:1fr;border-left:4px solid var(--amber)}.guide.drill ul{display:none}.guide.drill .gbig{font-size:22px;margin:0}
 .stagebar{position:absolute;right:12px;top:12px;display:flex;gap:6px;z-index:3}
-.icon{background:rgba(24,33,44,.82);border:1px solid rgba(255,255,255,.18);color:#F1F5FB;border-radius:10px;min-width:44px;min-height:40px;font:700 12px Inter;cursor:pointer;padding:0 10px}
+.icon{background:rgba(24,33,44,.82);border:1px solid rgba(255,255,255,.18);color:#F1F5FB;border-radius:10px;min-width:44px;min-height:40px;font:700 12px Poppins;cursor:pointer;padding:0 10px}
 .stage:fullscreen{aspect-ratio:auto;border-radius:0}
 .stage.mini{position:fixed;right:16px;bottom:16px;width:min(340px,60vw);z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.6);border:1px solid var(--line)}
 .stage.mini .cue{font-size:13px;padding:6px 8px}
@@ -81,15 +81,24 @@ body.running .hero{display:none}
 .replay canvas{width:100%;display:block;aspect-ratio:16/10}
 .rbar{color:var(--ink);display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line);background:var(--panel)}
 .rbar input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
-.phase{position:absolute;left:12px;top:12px;font:800 22px "Barlow Condensed";letter-spacing:.06em;text-transform:uppercase}
-.phase small{display:block;font:600 11px Inter;color:#B6C2CF;letter-spacing:.1em}
-.legend{position:absolute;right:12px;top:12px;font:600 12px Inter;color:var(--muted);text-align:right;line-height:1.7}
+.phase{position:absolute;left:12px;top:12px;font:800 22px Poppins;letter-spacing:.06em;text-transform:uppercase}
+.phase small{display:block;font:600 11px Poppins;color:#B6C2CF;letter-spacing:.1em}
+.legend{position:absolute;right:12px;top:12px;font:600 12px Poppins;color:var(--muted);text-align:right;line-height:1.7}
 .legend i{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
 .kcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
-.kcard .k{font:600 11px Inter;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}.kcard .v{font:800 30px "Barlow Condensed"}.kcard .v small{font:600 13px Inter;color:var(--muted);margin-left:6px}
+.kcard .k{font:600 11px Poppins;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}.kcard .v{font:800 30px Poppins}.kcard .v small{font:600 13px Poppins;color:var(--muted);margin-left:6px}
 .kcard p{margin:4px 0 0;font-size:13px}
+#intro{position:fixed;inset:0;z-index:100;background:var(--navy);display:grid;place-items:center;animation:introOut .6s ease 2.4s forwards}
+#intro svg{width:min(240px,50vw);overflow:visible}#intro .b{fill:none;stroke:var(--teal);stroke-width:4;stroke-linecap:round;stroke-dasharray:120;stroke-dashoffset:120;animation:draw .5s ease forwards}
+#intro .j{fill:#fff;opacity:0;animation:pop .3s ease forwards}#intro .arc{fill:none;stroke:#F59E0B;stroke-width:3;stroke-dasharray:60;stroke-dashoffset:60;animation:draw .5s ease 1.2s forwards}
+#intro h1{color:#fff;font-size:40px;text-align:center;margin-top:18px;opacity:0;transform:translateY(12px);animation:rise .5s ease 1.4s forwards}#intro h1 b{color:var(--teal)}
+#intro p{color:#B6C2CF;text-align:center;margin:6px 0 0;opacity:0;animation:rise .5s ease 1.7s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}@keyframes pop{to{opacity:1}}@keyframes rise{to{opacity:1;transform:none}}@keyframes introOut{to{opacity:0;visibility:hidden}}
+.hero,.sports,.controls,.stage{animation:rise .6s ease both}.hero{animation-delay:2.5s;opacity:0;transform:translateY(12px)}
+@media (prefers-reduced-motion:reduce){#intro{display:none}.hero{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
+<div id="intro" aria-hidden="true" onclick="this.remove()"><div><svg viewBox="0 0 110 110"><circle class="j" cx="50" cy="12" r="7" style="animation-delay:.05s;fill:none;stroke:#fff;stroke-width:3"/><line class="b" x1="50" y1="20" x2="50" y2="55" style="animation-delay:0.1s"/><line class="b" x1="50" y1="30" x2="30" y2="45" style="animation-delay:0.2s"/><line class="b" x1="30" y1="45" x2="22" y2="62" style="animation-delay:0.3s"/><line class="b" x1="50" y1="30" x2="72" y2="18" style="animation-delay:0.4s"/><line class="b" x1="72" y1="18" x2="88" y2="6" style="animation-delay:0.5s"/><line class="b" x1="50" y1="55" x2="38" y2="78" style="animation-delay:0.6s"/><line class="b" x1="38" y1="78" x2="30" y2="100" style="animation-delay:0.7s"/><line class="b" x1="50" y1="55" x2="66" y2="76" style="animation-delay:0.8s"/><line class="b" x1="66" y1="76" x2="78" y2="98" style="animation-delay:0.9s"/><circle class="j" cx="50" cy="30" r="3.5" style="animation-delay:0.90s"/><circle class="j" cx="30" cy="45" r="3.5" style="animation-delay:0.94s"/><circle class="j" cx="72" cy="18" r="3.5" style="animation-delay:0.98s"/><circle class="j" cx="88" cy="6" r="3.5" style="animation-delay:1.02s"/><circle class="j" cx="50" cy="55" r="3.5" style="animation-delay:1.06s"/><circle class="j" cx="38" cy="78" r="3.5" style="animation-delay:1.10s"/><circle class="j" cx="66" cy="76" r="3.5" style="animation-delay:1.14s"/><circle class="j" cx="30" cy="100" r="3.5" style="animation-delay:1.18s"/><circle class="j" cx="78" cy="98" r="3.5" style="animation-delay:1.22s"/><circle class="j" cx="22" cy="62" r="3.5" style="animation-delay:1.26s"/><path class="arc" d="M58 26 A14 14 0 0 1 66 40"/></svg><h1>RALLY<b>IQ</b></h1><p>A coach's eye on any phone</p></div></div>
 <header>
   <div class="logo">RALLY<b>IQ</b></div><div class="tag">See your game. Understand your technique. A coach's eye on any phone.</div>
   <nav aria-label="Sections"><button class="on" data-tab="lab">Technique lab</button><button data-tab="report">Session report</button><button data-tab="progress">Progress</button><button data-tab="research">Research &amp; limits</button></nav>
@@ -359,7 +368,7 @@ function handle(lm,W,Hh,ts,wl){
   else if(seg&&sp<thr*.5){const k=frames.indexOf(seg.f);if(k>=0&&ts-lastRep>700)addRep(k);seg=null;}
 }
 window.RQ={feed:(lm,ts)=>handle(lm,cv.width,cv.height,ts),finish:()=>finish(),reset:()=>resetSession(),cam:()=>{src='cam';armed=false;gPhase='setup';gOk=0;}};
-function labelJoints(f,s,h){const W=cv.width,fs=Math.max(18,W/40);ctx.font=`800 ${fs}px "Barlow Condensed"`;
+function labelJoints(f,s,h){const W=cv.width,fs=Math.max(18,W/40);ctx.font=`800 ${fs}px Poppins`;
   const D=side(h,1),O=side(h,0);
   const tri={elbow:[D+'s',D+'e',D+'w'],fknee:[O+'h',O+'k',O+'a'],sknee:[O+'h',O+'k',O+'a'],kknee:[D+'h',D+'k',D+'a'],knees:['lh','lk','la']};
   s.m.forEach(m=>{const t=tri[m.id];if(!t)return;const [A,B,C]=t.map(n=>J(f,n));if(B.v<.5)return;
@@ -432,7 +441,7 @@ function drawReplay(){const W=rc.width,Hh=rc.height;rx.clearRect(0,0,W,Hh);
   rx.save();rx.lineWidth=rc.height/150;rx.shadowColor='#F59E0B';rx.shadowBlur=14;
   for(let i=1;i<=t;i++){rx.strokeStyle=`rgba(245,158,11,${.15+.85*i/t})`;rx.beginPath();rx.moveTo(N[i-1][tj].x,N[i-1][tj].y);rx.lineTo(N[i][tj].x,N[i][tj].y);rx.stroke();}rx.restore();
   if(t>=rep.key){const K=N[rep.key][tj];rx.save();rx.fillStyle='#F59E0B';rx.shadowColor='#F59E0B';rx.shadowBlur=30;rx.beginPath();rx.arc(K.x,K.y,rc.height/55,0,7);rx.fill();rx.restore();
-    rx.font=`800 ${Hh/28}px "Barlow Condensed"`;rx.fillStyle='#F59E0B';rx.fillText(s.moment.toUpperCase(),K.x+18,K.y-14);}
+    rx.font=`800 ${Hh/28}px Poppins`;rx.fillStyle='#F59E0B';rx.fillText(s.moment.toUpperCase(),K.x+18,K.y-14);}
   figure(N[t],'#2DD4BF',1,true);
   if(t>=rep.key)arcs(N[t],s,h);
   const ph=t<rep.key-3?'Back-swing / load':t<=rep.key+1?s.moment:'Follow-through';
@@ -441,7 +450,7 @@ function arcs(F,s,h){const D=side(h,1),O=side(h,0);const tri={elbow:[D+'s',D+'e'
   s.m.forEach(m=>{const tr=tri[m.id];if(!tr)return;const [A,B,C]=tr.map(n=>F[P[n]]);if(B.v<.5)return;const v=ang(A,B,C);const isA=!(m.id==='elbow'&&sel.value==='bowl');const col=!isA?'#CBD5E1':(v>=m.lo&&v<=m.hi)?'#22C55E':'#F87171';
     const a1=Math.atan2(A.y-B.y,A.x-B.x),a2=Math.atan2(C.y-B.y,C.x-B.x);let d=a2-a1;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;const R=rc.height/16;
     rx.fillStyle=col+'40';rx.strokeStyle=col;rx.lineWidth=3;rx.beginPath();rx.moveTo(B.x,B.y);rx.arc(B.x,B.y,R,a1,a1+d,d<0);rx.closePath();rx.fill();rx.beginPath();rx.arc(B.x,B.y,R,a1,a1+d,d<0);rx.stroke();
-    rx.font=`800 ${rc.height/24}px "Barlow Condensed"`;rx.fillStyle=col;rx.fillText(Math.round(v)+'°',B.x+R+8,B.y-R/3);});}
+    rx.font=`800 ${rc.height/24}px Poppins`;rx.fillStyle=col;rx.fillText(Math.round(v)+'°',B.x+R+8,B.y-R/3);});}
 function kcards(i){const s=S(),r=reps[i],bi=bestIdx(),b=reps[bi];$('kcards').innerHTML=s.m.map((m,j)=>{const v=r.vals[j],bv=b.vals[j];
   if(!isFinite(v))return `<div class="kcard"><div class="k">${m.name}</div><div class="v warn">not visible</div><p>Camera could not see these joints clearly. Film side-on.</p></div>`;
   const ok=v>=m.lo&&v<=m.hi,gap=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;
@@ -492,4 +501,5 @@ renderProgress();
 function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelectorAll('.section').forEach(s=>s.hidden=s.id!==t);}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
 </script>
+<script>setTimeout(()=>{const i=document.getElementById('intro');if(i)i.remove();},3200);</script>
 </body></html>
