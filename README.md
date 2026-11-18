@@ -118,11 +118,31 @@ See [RULES.md](RULES.md) for the full list.
 
 ## Your project
 
-_Replace this section with your project README:_
-- **Team:**
-- **Track:**
-- **Problem:** who faces it and why it happens
-- **What we built:** the core workflow
-- **The hardest part:** how we solved it
-- **How to run it:**
-- **Demo / screenshots:**
+# RallyIQ: a coach's eye on any phone
+
+- **Team:** Team Gyarados (Suman Saha, Aman Kumar, Lakshya Toshniwal)
+- **Track:** Physical world
+- **Live demo:** https://sahasuman13.github.io/RTY-Hackathon/ (open on a phone or laptop; camera needs HTTPS)
+
+**Problem.** Most young cricket, table tennis and football players in India train without a coach watching every rep. Private coaching is costly and a coach cannot watch every repetition, so small faults (a collapsing front knee, an arm-only forehand) repeat for months. Players already film themselves on phones, but nobody turns that video into measurements.
+
+**What we built.** A browser app that turns the phone camera into a guided technique session:
+1. **Guided set-up:** checks whole body in frame, distance, side-on vs front view and stillness, with a voice coach; then a 3-2-1 countdown.
+2. **Drill:** 5 reps. Each rep is detected automatically at peak hand/foot speed (or a held posture for the ready stance).
+3. **Measurement:** Google MediaPipe Pose (full) gives 33 keypoints; we compute 3D joint angles (world landmarks), trunk lean, trunk turn, low-to-high swing and weight transfer at the key moment (ball release / contact).
+4. **Feedback:** each metric is compared with a labelled target (LAW / RESEARCH / COACH), with a cue, a drill and the source.
+5. **Replay studio:** animated skeleton of every rep with the hand/foot path, key-moment marker, angle arcs, a ghost of your best rep, slow-mo and 3D orbit.
+6. **Train your own model:** a coach approves good reps; after 3, RallyIQ learns that athlete's own target ranges (mean ± 2 SD) and uses them instead of the defaults.
+7. **Report + progress:** % in range, consistency score, best vs worst rep, #1 focus drill, session history (stored on the device only).
+
+Movements: cricket fast bowling, cricket front-foot drive, table tennis forehand drive/topspin, backhand drive, ready stance, football instep kick.
+
+**The hardest part.** Making it trustworthy rather than impressive. Pose models jitter and guess, so we (a) gate everything behind a guided set-up, (b) smooth adaptively, (c) drop any joint under 50% confidence and say "not visible" instead of guessing, (d) use no LLM, so no number on screen can be invented, and (e) label every target by evidence strength. Research gives directions, not one "perfect" angle, so the athlete's own best rep and a coach-trained personal model are the main benchmarks.
+
+**Evidence used.** ICC 15° elbow-extension limit; Worthington, King & Ranson 2013 (J Appl Biomech): straighter front knee at release goes with faster bowling in elite men; Iino & Kojima 2009 (J Sports Sci): trunk rotation drives table tennis forehand racket speed; Mao et al. 2023 (Applied Sciences): elbow and knee flexion in topspin forehands; Lees & Nolan 1998 (J Sports Sci) soccer biomechanics review; Sports2D (JOSS) filming guidance; our team's Table Tennis Technique & AI Movement Evaluation Framework (VICTAS, PingSkills, DTTA, Table Tennis Teacher sources). Full table in the app's "Research & limits" tab.
+
+**Honest limits.** Single phone camera = 2D/3D estimates with a few degrees of error. Does not certify bowling actions (needs ICC 3D lab testing), does not diagnose injury, and cannot yet measure racket angle, spin or exact ball contact (roadmap: racket/ball detection, second camera).
+
+**How to run it.** No install. Open `docs/index.html` through any static server, for example `python -m http.server 8010 -d docs`, then visit http://localhost:8010. Pick a movement, press **Live camera** (or **Upload video**), follow the voice coach.
+
+**Code:** `docs/index.html` (single file: UI, pose pipeline, biomechanics, rules, replay, training). The `sylveon/` folder is an earlier idea from this hackathon that we stopped.
