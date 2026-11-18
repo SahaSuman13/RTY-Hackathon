@@ -154,6 +154,17 @@ body.running .hero{display:none}
 <tr><td>Film parallel to the motion plane</td><td><span class="badge warn">TOOL GUIDANCE</span> Open-source 2D sports kinematics tool recommends filming the athlete parallel to the motion plane; same limit applies here.</td><td><a href="https://www.theoj.org/joss-papers/joss.06849/10.21105.joss.06849.pdf">Pagnon et al., Sports2D, JOSS</a></td></tr>
 <tr><td>Phone pose accuracy</td><td><span class="badge warn">LIMIT</span> MediaPipe sagittal-plane angle errors of roughly 3–9° vs marker digitising in one cycling study; worse out of plane. Film side-on.</td><td><a href="https://www.frontiersin.org/articles/10.3389/fspor.2025.1712332/full">Frontiers in Sports 2025</a>; cycling validation study</td></tr>
 </tbody></table>
+<h3 style="margin-top:16px">How the AI pipeline works (every number is traceable)</h3>
+<table><thead><tr><th>Stage</th><th>What it does</th><th>Can it make things up?</th></tr></thead><tbody>
+<tr><td>1. Vision model</td><td>Google MediaPipe Pose Landmarker (full), 33 body keypoints per frame, on-device</td><td>No: outputs coordinates + confidence only</td></tr>
+<tr><td>2. Stabiliser</td><td>Adaptive smoothing (steady when still, responsive when fast); joints under 50% confidence dropped; nothing drawn until the whole body is in frame</td><td>No</td></tr>
+<tr><td>3. Biomechanics engine</td><td>Joint angles, trunk lean, rotation, low-to-high path, weight transfer; detects each rep at peak hand/foot speed (or a held posture)</td><td>No: fixed maths</td></tr>
+<tr><td>4. Rule engine</td><td>Compares to labelled targets: LAW / RESEARCH / COACH, or YOUR MODEL once trained</td><td>No: rules written by us, sources listed</td></tr>
+<tr><td>5. Personal model (training)</td><td>A coach approves good reps; RallyIQ learns that athlete's own target ranges (mean ± 2 SD, min ±5)</td><td>No: learns only from approved reps</td></tr>
+<tr><td>6. Coach output</td><td>Cue, drill, best-vs-worst replay, progress</td><td>Templates tied to measured numbers</td></tr></tbody></table>
+<h3 style="margin-top:16px">Table tennis framework used</h3>
+<p class="tip">Ready stance, forehand drive/topspin and backhand drive checks follow our team's <b>Table Tennis Technique &amp; AI Movement Evaluation Framework</b> (11 sections: ready stance, forehand, backhand, topspin, push, chop, block, footwork, checklist, landmarks, cameras), compiled from VICTAS, Table Tennis Teacher, PingSkills, DTTA (German TT Association) and 卓球レポート coaching sources. Extra research: <a href="https://mdpi.com/2076-3417/13/14/8119">Mao et al. 2023, Applied Sciences</a> (straighter elbow and lower stance vs backspin; advanced players flex the elbow less at the stroke).</p>
+<p class="tip">Not yet measurable from body pose alone (framework §13): racket-face angle, exact ball contact, spin. Roadmap: racket and ball detection, a second (front) camera, high-speed video.</p>
 <h3 style="margin-top:16px">What RallyIQ deliberately does not claim</h3>
 <ul class="tip"><li>It does not certify a bowling action as legal or illegal (that needs ICC-accredited 3D testing).</li><li>It does not predict or diagnose injury.</li><li>A difference from the range is a <b>flag to check with a coach</b>, not an automatic error. Your own best rep is the main benchmark.</li><li>Joints the model is less than 50% confident about are dropped and shown as "not visible", never guessed.</li><li>Pose model: Google MediaPipe Pose Landmarker (lite), runs fully in the browser.</li></ul>
 <h3 style="margin-top:16px">Roadmap</h3><ul class="tip"><li>Grip check from a close-up hand photo (hand keypoints; fingers are hidden by the bat in full-body video).</li><li>Higher-accuracy offline analysis (RTMPose / Sports2D) for uploaded match video.</li><li>Coach-labelled reference reps to replace starter ranges; pro-swing alignment.</li><li>LLM explanations that receive only flagged numbers and may not add measurements.</li></ul>
@@ -191,13 +202,35 @@ const SPORTS={
      {id:"head",name:"Head over front knee (gap)",unit:"%",lo:0,hi:35,max:100,ev:"COACH",src:"Skilled batters keep the head further forward than less-skilled ones (front-foot drive study)",
       fn:(F,k,h)=>{const s=side(h,0),f=F[k];return Math.abs(f[P.nose].x-J(f,s+'k').x)/torsoLen(f)*100;},low:"",high:"Head is behind the front knee. Lead with the head towards the ball.",drill:"Tennis-ball drop drill: partner drops a ball, you lean head over it before driving, 3×10."},
      {id:"lean",name:"Trunk forward lean",unit:"°",lo:10,hi:35,max:60,minv:-20,ev:"COACH",src:"Starter range, coach-adjustable",fn:(F,k)=>lean(F[k]),low:"Leaning back. Ball will go in the air.",high:"Over-reaching forward.",drill:"Mirror shadow drives: freeze at contact and check the lean, 3×10."}]},
- tt:{label:"Table tennis · Forehand",track:h=>side(h,1)+'w',moment:"ball contact",setup:"Film from the side of the table (or 45° front), full body visible. Play or shadow 5+ forehands.",
-  m:[{id:"elbow",name:"Playing elbow angle at contact",unit:"°",lo:90,hi:140,max:180,minv:40,ev:"COACH",src:"Coaching starter range",
-      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w'));},low:"Arm too cramped. Make more space from the body.",high:"Arm too straight. Keep a relaxed bend.",drill:"Shadow forehand with a towel under the arm-pit, 3×20."},
-     {id:"knees",name:"Knee bend (stance)",unit:"°",lo:130,hi:165,max:180,minv:90,ev:"COACH",src:"Athletic stance, starter range",
-      fn:(F,k)=>{const f=F[k];return (ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2;},low:"Too low; hard to move.",high:"Standing too upright. Bend the knees, weight on the balls of the feet.",drill:"Ready-stance side shuffles, 4×30 s."},
-     {id:"turn",name:"Trunk turn during stroke",unit:"%",lo:25,hi:120,max:150,ev:"RESEARCH",src:"Iino & Kojima 2009: trunk rotation drives racket speed",
-      fn:(F,k)=>{const w=F.slice(Math.max(0,k-15),Math.min(F.length,k+4)).map(f=>Math.abs(f[P.ls].x-f[P.rs].x)/torsoLen(f)*100);return Math.max(...w)-Math.min(...w);},low:"Arm-only stroke. Turn the waist and shoulders into the shot.",high:"",drill:"Hip-turn shadow strokes with a racket across the chest, 3×15."}]},
+ tt:{label:"Table tennis · Forehand drive / topspin",track:h=>side(h,1)+'w',moment:"ball contact",setup:"Film side-on to your hitting arm, whole body visible. Play or shadow 5+ forehands.",
+  m:[{id:"elbow",name:"Playing elbow at contact",unit:"°",lo:90,hi:140,max:180,minv:40,ev:"RESEARCH",src:"Framework §2: naturally bent, not locked. Advanced players flex the elbow less at the stroke (Mao 2023)",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w'));},low:"Arm too cramped. Make space from the body.",high:"Arm locked straight. Keep a natural bend.",drill:"Shadow forehands with a towel under the armpit, 3×20."},
+     {id:"load",name:"Leg loading in back-swing",unit:"°",lo:115,hi:158,max:180,minv:80,ev:"COACH",src:"Framework §4: bend the knees to prepare; lower stance vs backspin (Mao 2023)",
+      fn:(F,k)=>{const w=F.slice(Math.max(0,k-15),k+1).map(f=>(ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2);return Math.min(...w);},low:"Sitting too low, hard to recover.",high:"Legs too straight. Load the knees before you swing.",drill:"Ready-stance shuffles, knees bent, 4×30 s."},
+     {id:"turn",name:"Waist and shoulder turn",unit:"%",lo:25,hi:150,max:160,ev:"RESEARCH",src:"Iino & Kojima 2009: lower-trunk rotation drives racket speed in advanced players",
+      fn:(F,k)=>{const w=F.slice(Math.max(0,k-15),Math.min(F.length,k+4)).map(f=>Math.abs(f[P.ls].x-f[P.rs].x)/torsoLen(f)*100);return Math.max(...w)-Math.min(...w);},low:"Arm-only stroke. Turn waist and shoulders back, then forward.",high:"",drill:"Hip-turn shadow strokes with the racket across the chest, 3×15."},
+     {id:"l2h",name:"Low-to-high swing path",unit:"%",lo:15,hi:250,max:260,ev:"COACH",src:"Framework §4: accelerate the racket from low to high",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k],lo=Math.max(...F.slice(Math.max(0,k-15),k+1).map(x=>J(x,s+'w').y)),end=J(F[Math.min(F.length-1,k+4)],s+'w').y;return (lo-end)/torsoLen(f)*100;},low:"Swing is too flat. Start lower, finish around forehead height.",high:"",drill:"Multiball topspin: racket starts at knee height, finishes at forehead, 3×20."},
+     {id:"wt",name:"Weight transfer back to front",unit:"%",lo:3,hi:80,max:90,minv:-30,ev:"COACH",src:"Framework §2: transfer weight from back foot to front foot",
+      fn:(F,k)=>{const a=F[Math.max(0,k-15)],b=F[k],d=facing(b);return (mid(b[P.lh],b[P.rh]).x-mid(a[P.lh],a[P.rh]).x)*d/torsoLen(b)*100;},low:"Weight stays on the back foot. Push off the back leg into the shot.",high:"",drill:"Step-in forehands: start weight on back foot, finish on front foot, 3×15."}]},
+ ttbh:{label:"Table tennis · Backhand drive",track:h=>side(h,1)+'w',moment:"ball contact",setup:"Film from the front or 45°, whole body visible. Play or shadow 5+ backhands.",
+  m:[{id:"elbow",name:"Elbow at contact",unit:"°",lo:80,hi:140,max:180,minv:30,ev:"COACH",src:"Framework §3: elbow naturally bent, used as a stable pivot",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w'));},low:"Elbow too tight to the body.",high:"Over-extending the arm. Keep it compact.",drill:"Elbow-pivot backhands against a wall, 3×30."},
+     {id:"knees",name:"Knees bent",unit:"°",lo:120,hi:165,max:180,minv:90,ev:"COACH",src:"Framework §1/§3: knees bent, not locked",
+      fn:(F,k)=>{const f=F[k];return (ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2;},low:"Too low.",high:"Knees locked. Bend them.",drill:"Ready-stance holds, 4×20 s."},
+     {id:"lean",name:"Upper body forward",unit:"°",lo:8,hi:35,max:60,minv:-20,ev:"COACH",src:"Framework §3: upper body slightly forward",fn:(F,k)=>lean(F[k]),low:"Standing too upright.",high:"Bending over too much.",drill:"Mirror holds of the backhand ready position, 3×20 s."},
+     {id:"stab",name:"Shoulder stability",unit:"%",lo:0,hi:30,max:80,ev:"COACH",src:"Framework §3: keep the shoulders relatively stable",
+      fn:(F,k)=>{const w=F.slice(Math.max(0,k-12),Math.min(F.length,k+4)).map(f=>Math.abs(f[P.ls].x-f[P.rs].x)/torsoLen(f)*100);return Math.max(...w)-Math.min(...w);},low:"",high:"Shoulders swinging. Let the forearm do the work.",drill:"Backhand with a ball held under the playing arm, 3×20."}]},
+ ttready:{label:"Table tennis · Ready stance",static:true,track:h=>side(h,1)+'w',moment:"held posture",setup:"Face the camera (front view), whole body visible. Take your ready stance and hold still 1 second; repeat 5 times.",
+  m:[{id:"knees",name:"Knees bent, not locked",unit:"°",lo:120,hi:165,max:180,minv:90,ev:"COACH",src:"Framework §1: penalise completely straight knees",
+      fn:(F,k)=>{const f=F[k];return (ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2;},low:"Too deep, you will be slow to move.",high:"Knees locked. Bend them, weight on the balls of the feet.",drill:"Ready-stance holds, 4×20 s."},
+     {id:"feet",name:"Feet width vs shoulders",unit:"%",lo:100,hi:220,max:260,ev:"COACH",src:"Framework §1: feet slightly wider than shoulder-width (front camera)",
+      fn:(F,k)=>{const f=F[k];return Math.abs(f[P.la].x-f[P.ra].x)/(Math.abs(f[P.ls].x-f[P.rs].x)||1)*100;},low:"Feet too narrow. Widen to just beyond shoulder width.",high:"Feet too wide.",drill:"Tape two marks just outside shoulder width and step into them, 10×."},
+     {id:"lean",name:"Trunk forward inclination",unit:"°",lo:8,hi:35,max:60,minv:-20,ev:"COACH",src:"Framework §1: slight forward inclination; flag upright or over-bent",fn:(F,k)=>lean(F[k]),low:"Too upright.",high:"Bending over too much.",drill:"Mirror check of the ready position, 3×20 s."},
+     {id:"elbow",name:"Elbow slightly bent",unit:"°",lo:80,hi:150,max:180,minv:30,ev:"COACH",src:"Framework §1: elbows slightly bent",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w'));},low:"Arm tucked too tight.",high:"Arm hanging straight.",drill:"Hold the racket in front at table height, 3×20 s."},
+     {id:"hand",name:"Racket hand height above hip",unit:"%",lo:0,hi:75,max:120,minv:-40,ev:"COACH",src:"Framework §1: racket in front of the body, around table height",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return (J(f,s+'h').y-J(f,s+'w').y)/torsoLen(f)*100;},low:"Racket hand too low.",high:"Racket hand too high.",drill:"Ready position with racket tip at table height, 3×20 s."}]},
  kick:{label:"Football · Instep kick",track:h=>side(h,1)+'a',moment:"ball contact",setup:"Film side-on, full body, ball in frame. Kick 5+ times.",
   m:[{id:"sknee",name:"Support knee at contact",unit:"°",lo:130,hi:165,max:180,minv:90,ev:"COACH",src:"Starter range (Lees & Nolan 1998 review)",
       fn:(F,k,h)=>{const s=side(h,0),f=F[k];return ang(J(f,s+'h'),J(f,s+'k'),J(f,s+'a'));},low:"Support leg too bent.",high:"Support leg locked straight. Soften the knee.",drill:"Plant-and-hold: plant support foot beside the ball, slight knee bend, 3×10."},
@@ -205,15 +238,26 @@ const SPORTS={
       fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'h'),J(f,s+'k'),J(f,s+'a'));},low:"Knee still bent at contact. Snap the lower leg through the ball.",high:"",drill:"Wall passes focusing on full knee extension through contact, 3×15."},
      {id:"lean",name:"Trunk lean",unit:"°",lo:0,hi:25,max:50,minv:-40,ev:"COACH",src:"'Over the ball' coaching cue",fn:(F,k)=>lean(F[k]),low:"Leaning back: ball will rise.",high:"Leaning too far forward.",drill:"Low-drive drill: chest over the ball, aim under the crossbar height, 3×10."}]}
 };
-const EV={LAW:["LAW","ok"],RESEARCH:["RESEARCH","warn"],COACH:["COACH",""]};
+const EV={TRAINED:["YOUR MODEL","ok"],LAW:["LAW","ok"],RESEARCH:["RESEARCH","warn"],COACH:["COACH",""]};
 
+// ---------- personal model: ranges learned from coach-approved reps ----------
+function goodStore(){try{return JSON.parse(localStorage.getItem('rallyiq-good')||'{}');}catch(e){return {};}}
+function applyTraining(){const G=goodStore();Object.entries(SPORTS).forEach(([k,sp])=>sp.m.forEach((m,i)=>{
+  if(m.lo0===undefined){m.lo0=m.lo;m.hi0=m.hi;m.ev0=m.ev;m.src0=m.src;}
+  const v=(G[k]||[]).map(r=>r[i]).filter(isFinite);
+  if(v.length>=3){const mu=v.reduce((a,b)=>a+b,0)/v.length,sd=Math.sqrt(v.reduce((a,b)=>a+(b-mu)**2,0)/v.length),w=Math.max(5,2*sd);
+    m.lo=Math.round(mu-w);m.hi=Math.round(mu+w);m.ev='TRAINED';m.src=`Learned from ${v.length} coach-approved reps (mean ${Math.round(mu)} ± ${Math.round(w)}). Research default: ${m.lo0}–${m.hi0}. ${m.src0}`;}
+  else{m.lo=m.lo0;m.hi=m.hi0;m.ev=m.ev0;m.src=m.src0;}}));}
+applyTraining();
+window.markGood=i=>{const G=goodStore();(G[sel.value]=G[sel.value]||[]).push(reps[i].vals);try{localStorage.setItem('rallyiq-good',JSON.stringify(G));}catch(e){}applyTraining();renderLive(reps[i].vals);kcards(i);};
+window.clearModel=()=>{const G=goodStore();delete G[sel.value];try{localStorage.setItem('rallyiq-good',JSON.stringify(G));}catch(e){}applyTraining();renderLive(null);if(rIdx>=0)kcards(rIdx);};
 // ---------- state ----------
 const $=id=>document.getElementById(id);
 const vid=$('vid'),cv=$('cv'),ctx=cv.getContext('2d');
 let pose,draw,running=false,src=null,stream=null,lastT=-1;
-let frames=[],thumbs=[],reps=[],seg=null,lastRep=-1e9,prevPt=null,prevTs=0,sp=0;
+let armed=true,prevF=null,still=0,frames=[],thumbs=[],reps=[],seg=null,lastRep=-1e9,prevPt=null,prevTs=0,sp=0;
 const sel=$('sport');sel.innerHTML=Object.entries(SPORTS).map(([k,s])=>`<option value="${k}">${s.label}</option>`).join('');
-const ICON={"bowl": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M5 7c4 2 10 2 14 0M5 17c4-2 10-2 14 0\"/>", "drive": "<path d=\"M6 20l10-14 3 2-10 14z\"/><circle cx=\"18\" cy=\"18\" r=\"2\"/>", "tt": "<circle cx=\"9\" cy=\"9\" r=\"6\"/><path d=\"M13 13l6 6\"/><circle cx=\"19\" cy=\"6\" r=\"1.5\"/>", "kick": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7l4 3-1.5 5h-5L8 10z\"/>"};
+const ICON={"ttbh":'<circle cx="15" cy="9" r="6"/><path d="M11 13l-6 6"/>',"ttready":'<circle cx="12" cy="5" r="2"/><path d="M12 7v6M8 21l4-8 4 8M7 10h10"/>',"bowl": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M5 7c4 2 10 2 14 0M5 17c4-2 10-2 14 0\"/>", "drive": "<path d=\"M6 20l10-14 3 2-10 14z\"/><circle cx=\"18\" cy=\"18\" r=\"2\"/>", "tt": "<circle cx=\"9\" cy=\"9\" r=\"6\"/><path d=\"M13 13l6 6\"/><circle cx=\"19\" cy=\"6\" r=\"1.5\"/>", "kick": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7l4 3-1.5 5h-5L8 10z\"/>"};
 function cards(){$('sportCards').innerHTML=Object.entries(SPORTS).map(([k,v])=>{const [a,b]=v.label.split(' · ');return `<button type="button" role="radio" aria-checked="${k===sel.value}" class="sp ${k===sel.value?'on':''}" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg><small>${a}</small><b>${b.replace(' (side-on)','')}</b></button>`;}).join('');}
 cards();$('sportCards').onclick=e=>{const b=e.target.closest('.sp');if(!b)return;sel.value=b.dataset.k;cards();sel.onchange();};
 const S=()=>SPORTS[sel.value],H=()=>$('hand').value;
@@ -224,16 +268,16 @@ const thumbC=Array.from({length:40},()=>{const c=document.createElement('canvas'
 // ---------- model ----------
 (async()=>{try{
   const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
-  const opts=d=>({baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:d},runningMode:"VIDEO",numPoses:1});
+  const opts=d=>({baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",delegate:d},runningMode:"VIDEO",numPoses:1});
   try{pose=await PoseLandmarker.createFromOptions(fs,opts("GPU"));}catch(e){pose=await PoseLandmarker.createFromOptions(fs,opts("CPU"));}
   draw=new DrawingUtils(ctx);$('st').textContent='Ready';$('cam').disabled=false;
  }catch(e){$('st').textContent='Model failed to load: '+e.message;}})();
 setup();
 
-function resetSession(){frames=[];reps=[];rIdx=-1;try{drawReplay();$('kcards').innerHTML='<p class="empty">No rep yet.</p>';$('rsel').innerHTML='';}catch(e){}seg=null;lastRep=-1e9;prevPt=null;$('reps').textContent='Reps 0';$('cue').textContent='';renderLive(null);}
+function resetSession(){prevF=null;still=0;frames=[];reps=[];rIdx=-1;try{drawReplay();$('kcards').innerHTML='<p class="empty">No rep yet.</p>';$('rsel').innerHTML='';}catch(e){}seg=null;lastRep=-1e9;prevPt=null;$('reps').textContent='Reps 0';$('cue').textContent='';renderLive(null);}
 
 $('cam').onclick=async()=>{try{stopSrc();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:1280,height:720},audio:false});
-  vid.srcObject=stream;vid.src='';await vid.play();src='cam';resetSession();loop();$('st').textContent='LIVE';$('st').className='chip live';}
+  vid.srcObject=stream;vid.src='';await vid.play();src='cam';resetSession();armed=false;loop();let c=3;const cd=setInterval(()=>{$('cue').textContent=c>0?`Get in position… ${c}`:'Recording: go!';if(c<0){clearInterval(cd);armed=true;$('cue').textContent='Recording: play your shot';}c--;},800);$('st').textContent='LIVE';$('st').className='chip live';}
   catch(e){$('st').textContent='Camera blocked: '+e.message;}};
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;stopSrc();vid.srcObject=null;vid.src=URL.createObjectURL(f);vid.loop=false;await vid.play();src='file';resetSession();loop();$('st').textContent='Analysing video';$('st').className='chip';};
 vid.onended=()=>{if(src==='file'){finish();}};
@@ -254,7 +298,11 @@ function process(ts){
   handle(lm,W,Hh,ts);
 }
 function handle(lm,W,Hh,ts){
-  const f=lm.map(p=>({x:p.x*W,y:p.y*Hh,v:p.visibility??1}));f.t=ts;
+  let f=lm.map(p=>({x:p.x*W,y:p.y*Hh,v:p.visibility??1}));
+  const vis0=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+f[i].v,0)/12;
+  if(vis0<.6){$('conf').textContent='Step back: full body side-on';prevF=null;return;}  // no skeleton unless the athlete is clearly in frame
+  if(prevF){const tl0=torsoLen(f);f=f.map((p,i)=>{const q=prevF[i],d=Math.hypot(p.x-q.x,p.y-q.y)/tl0;const al=Math.min(1,.25+d*6);return {x:q.x+al*(p.x-q.x),y:q.y+al*(p.y-q.y),v:p.v};});} // adaptive smoothing: steady when still, responsive when fast
+  prevF=f;f.t=ts;lm=f.map(p=>({x:p.x/W,y:p.y/Hh,visibility:p.v}));
   draw.drawConnectors(lm,PoseLandmarker.POSE_CONNECTIONS,{color:'#C8F04A',lineWidth:Math.max(3,W/320)});
   draw.drawLandmarks(lm,{color:'#4FD6E8',radius:Math.max(3,W/300),lineWidth:1});
   const vis=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+f[i].v,0)/12;
@@ -270,6 +318,8 @@ function handle(lm,W,Hh,ts){
   const pt=f[P[s.track(h)]],tl=torsoLen(f);
   if(prevPt){const dt=(ts-prevTs)/1000||.033;const v=Math.hypot(pt.x-prevPt.x,pt.y-prevPt.y)/tl/dt;sp=.6*sp+.4*v;}
   prevPt=pt;prevTs=ts;
+  if(!armed)return;
+  if(s.static){if(sp<.6)still++;else still=0;if(still>=20&&ts-lastRep>1500){addRep(frames.length-1);still=0;}return;}
   const thr=sel.value==='kick'?3:2.5;
   if(sp>thr){if(!seg)seg={max:0,k:0};if(sp>seg.max){seg.max=sp;seg.k=frames.length-1;seg.f=f;}}
   else if(seg&&sp<thr*.5){const k=frames.indexOf(seg.f);if(k>=0&&ts-lastRep>700)addRep(k);seg=null;}
@@ -360,7 +410,7 @@ function kcards(i){const s=S(),r=reps[i],bi=bestIdx(),b=reps[bi];$('kcards').inn
   const ok=v>=m.lo&&v<=m.hi,gap=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;
   const vsBest=i!==bi&&isFinite(bv)?` Your best rep: ${Math.round(bv)}${m.unit} (${v>bv?'+':''}${Math.round(v-bv)}${m.unit} vs best).`:'';
   return `<div class="kcard"><div class="k">${m.name} · <span class="badge ${EV[m.ev][1]}">${EV[m.ev][0]}</span></div><div class="v ${ok?'ok':'bad'}">${Math.round(v)}${m.unit}<small>target ${m.lo}–${m.hi}${m.unit}</small></div>
-  <p>${ok?'In range.':`${Math.round(gap)}${m.unit} ${v<m.lo?'below':'above'} target. ${(v<m.lo?m.low:m.high)||''}`}${vsBest}</p>${ok?'':`<p class="tip"><b>Drill:</b> ${m.drill}</p>`}<p class="tip">${m.src}</p></div>`;}).join('');}
+  <p>${ok?'In range.':`${Math.round(gap)}${m.unit} ${v<m.lo?'below':'above'} target. ${(v<m.lo?m.low:m.high)||''}`}${vsBest}</p>${ok?'':`<p class="tip"><b>Drill:</b> ${m.drill}</p>`}<p class="tip">${m.src}</p></div>`;}).join('')+`<div class="kcard"><div class="k">Train your own model</div><p>Coach or you approve this rep as good technique. After 3 approved reps, RallyIQ learns <b>your</b> target ranges for this stroke (mean ± 2 SD) and uses them instead of the research defaults.</p><p><button class="btn" type="button" onclick="markGood(${i})">Approve rep ${i+1} as good</button> <button class="btn ghost" type="button" onclick="clearModel()">Reset model</button></p><p class="tip">Approved reps for this stroke: ${(goodStore()[sel.value]||[]).length}</p></div>`;}
 drawReplay();
 $('fs').onclick=()=>{const st=$('stage');if(document.fullscreenElement)document.exitFullscreen();else if(st.requestFullscreen)st.requestFullscreen();};
 $('mini').onclick=()=>{const st=$('stage');st.classList.toggle('mini');$('mini').textContent=st.classList.contains('mini')?'Expand':'Minimise';};
