@@ -312,7 +312,12 @@ const FRONT=()=>['ttready','ttbh'].includes(sel.value);
 const SETUPMSG=()=>FRONT()?'Camera ki taraf face karke khade ho jao, lagbhag teen meter door. Poori body frame mein dikhni chahiye, sir se pair tak.':'Camera ke side mein khade ho jao, ek kandha camera ki taraf. Lagbhag teen se chaar meter door. Poori body frame mein honi chahiye.';
 let VOICE=null;function pickVoice(){const v=speechSynthesis.getVoices();VOICE=v.find(x=>/en-IN/i.test(x.lang))||v.find(x=>/hi-IN/i.test(x.lang))||v.find(x=>/India|Heera|Ravi|Neerja|Prabhat/i.test(x.name))||null;}
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
-function say(t){if(t===gLast)return;gLast=t;if($('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);if(VOICE){u.voice=VOICE;u.lang=VOICE.lang;}else u.lang='en-IN';u.rate=.85;u.pitch=1;speechSynthesis.speak(u);}}
+// voice queue: never cut a sentence mid-way. Live posture cues wait for the current sentence; only the newest waiting cue is kept.
+let vPending=null,vBusy=false;
+function speakNow(t){const u=new SpeechSynthesisUtterance(t);if(VOICE){u.voice=VOICE;u.lang=VOICE.lang;}else u.lang='en-IN';u.rate=.85;u.pitch=1;vBusy=true;
+  u.onend=u.onerror=()=>{vBusy=false;if(vPending){const n=vPending;vPending=null;setTimeout(()=>speakNow(n),350);}};speechSynthesis.speak(u);}
+function say(t,prio){if(t===gLast)return;gLast=t;if(!$('voice').checked||!('speechSynthesis' in window))return;
+  if(vBusy||speechSynthesis.speaking){if(prio){vPending=t;}else vPending=t;return;}speakNow(t);}
 function guide(f,W,Hh,ts){const g=$('guide');g.hidden=false;g.className='guide';
   let checks;if(!f){checks=[['Poori body frame mein laao',false],['Sahi doori',false],[FRONT()?'Camera ki taraf face karo':'Side-on khade ho',false],['Stance mein ruk jao',false]];}
   else{const xs=f.map(p=>p.x),top=f[0].y,bot=Math.max(f[27].y,f[28].y),h=(bot-top)/Hh;
