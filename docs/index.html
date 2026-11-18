@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RallyIQ · Technique Lab</title>
+<meta name="description" content="Phone-camera technique analysis for athletes without a coach: skeleton, joint angles, rep consistency, research-backed target ranges and drills.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0F14;--panel:#121820;--panel2:#18202B;--line:#243040;--ink:#EEF2F6;--muted:#9AA7B6;--accent:#C8F04A;--accent-ink:#0B0F14;--cyan:#4FD6E8;--ok:#5BE08A;--warn:#FFB547;--bad:#FF6B6B;--r:14px}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+h1,h2,h3{font-family:"Barlow Condensed",sans-serif;letter-spacing:.02em;margin:0;text-transform:uppercase}
+a{color:var(--cyan)}.mono{font-family:"JetBrains Mono",monospace}
+header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.logo{font:800 28px "Barlow Condensed";letter-spacing:.04em}.logo b{color:var(--accent)}
+.tag{color:var(--muted);font-size:13px}
+nav{margin-left:auto;display:flex;gap:6px}
+nav button,.seg button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:600 13px Inter;cursor:pointer;min-height:40px}
+nav button.on,.seg button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+main{max-width:1280px;margin:0 auto;padding:16px}
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:16px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}nav{margin-left:0}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:500 14px Inter;min-height:40px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:10px 16px;font:700 14px Inter;cursor:pointer;min-height:42px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.stage{position:relative;background:#000;border-radius:var(--r);overflow:hidden;aspect-ratio:16/10;display:grid;place-items:center}
+.stage canvas{width:100%;height:100%;object-fit:contain;display:block}
+.stage video{display:none}
+.hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:rgba(11,15,20,.78);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font:600 12px Inter;backdrop-filter:blur(4px)}
+.chip.live{color:var(--bad)}.chip.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:6px}
+.cue{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(11,15,20,.85);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;font:700 20px "Barlow Condensed";letter-spacing:.02em;text-transform:uppercase;min-height:20px}
+.cue:empty{display:none}
+.empty{color:var(--muted);text-align:center;padding:24px;font-size:14px;max-width:420px}
+.metric{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.metric:last-child{border-bottom:0}
+.metric .name{font-weight:600}.metric .val{font:700 26px "Barlow Condensed";text-align:right}
+.metric .rng{color:var(--muted);font-size:12px}.metric .src{font-size:11px;color:var(--muted);text-align:right}
+.bar{grid-column:1/-1;height:8px;background:var(--panel2);border-radius:99px;position:relative;margin-top:4px}
+.bar .band{position:absolute;top:0;bottom:0;background:rgba(91,224,138,.28);border-radius:99px}
+.bar .dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:var(--ink);border:3px solid var(--bg);transform:translateX(-50%);transition:left .15s}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.stat{background:var(--panel2);border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font:800 34px "Barlow Condensed";color:var(--accent)}.stat span{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-weight:500}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cmp figure{margin:0}.cmp img{width:100%;border-radius:10px;border:2px solid var(--line)}.cmp .best img{border-color:var(--ok)}.cmp .worst img{border-color:var(--bad)}
+.cmp figcaption{font-size:13px;margin-top:6px}
+.drill{background:var(--panel2);border-left:4px solid var(--cyan);border-radius:10px;padding:10px 12px;margin:8px 0}
+.badge{display:inline-block;font:700 11px Inter;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.section[hidden]{display:none}
+.tip{color:var(--muted);font-size:13px;margin:8px 0 0}
+.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:16px}@media(max-width:900px){.hero{grid-template-columns:1fr}}
+.hero h1{font-size:44px;line-height:1}.hero h1 em{color:var(--accent);font-style:normal}
+.hero p{color:var(--muted)}
+.how{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:600px){.how{grid-template-columns:1fr 1fr}}
+.how div{background:var(--panel2);border-radius:12px;padding:10px;font-size:13px}.how b{display:block;font:800 22px "Barlow Condensed";color:var(--cyan)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<header>
+  <div class="logo">RALLY<b>IQ</b></div><div class="tag">See your game. Understand your technique. A coach's eye on any phone.</div>
+  <nav aria-label="Sections"><button class="on" data-tab="lab">Technique lab</button><button data-tab="report">Session report</button><button data-tab="progress">Progress</button><button data-tab="research">Research &amp; limits</button></nav>
+</header>
+<main>
+<section class="hero">
+  <div><h1>Talent shouldn't need a <em>private coach</em> to improve.</h1>
+  <p>Point a phone at yourself, play your shot, and RallyIQ measures your body like a broadcast replay: joint angles, how consistent each rep is, and where you are against published research ranges. Video never leaves your phone.</p></div>
+  <div class="how"><div><b>1</b>Pick sport + shot</div><div><b>2</b>Camera or upload, side-on</div><div><b>3</b>Play 5+ reps</div><div><b>4</b>Get numbers, cues, drills</div></div>
+</section>
+
+<div class="section" id="lab">
+<div class="grid">
+  <div>
+    <div class="controls">
+      <select id="sport" aria-label="Sport and movement"></select>
+      <select id="hand" aria-label="Dominant side"><option value="R">Right-handed / right-footed</option><option value="L">Left-handed / left-footed</option></select>
+      <button class="btn" id="cam" disabled>Live camera</button>
+      <label class="btn ghost" id="uplab" style="display:inline-flex;align-items:center">Upload video<input id="file" type="file" accept="video/*" hidden></label>
+      <button class="btn ghost" id="stop">Finish &amp; report</button>
+      <label class="tag"><input type="checkbox" id="voice"> Voice cues</label>
+    </div>
+    <div class="stage" id="stage">
+      <video id="vid" playsinline muted></video>
+      <canvas id="cv" width="960" height="600" aria-label="Video with skeleton overlay"></canvas>
+      <div class="hud"><span class="chip" id="st">Loading pose model…</span><span class="chip" id="reps">Reps 0</span><span class="chip" id="conf">Tracking –</span></div>
+      <div class="cue" id="cue" aria-live="polite"></div>
+    </div>
+    <p class="tip" id="setup"></p>
+  </div>
+  <aside class="card">
+    <h2>Live metrics</h2>
+    <p class="tip">Green band = target range. Each metric is measured at the key moment of each rep (release, contact).</p>
+    <div id="metrics"></div>
+  </aside>
+</div>
+</div>
+
+<div class="section" id="report" hidden><div class="card" id="reportBody"><p class="empty">Play at least 2 reps, then press <b>Finish &amp; report</b>.</p></div></div>
+<div class="section" id="progress" hidden><div class="card" id="progBody"></div></div>
+
+<div class="section" id="research" hidden><div class="card">
+<h2>Where the target ranges come from</h2>
+<p class="tip">Every target is labelled by strength of evidence. We never invent a number: if research gives only a direction, the range is a coach-adjustable starter value and says so.</p>
+<table><thead><tr><th>Check</th><th>Evidence</th><th>Source</th></tr></thead><tbody>
+<tr><td>Bowling: elbow extension ≤ 15°</td><td><span class="badge ok">LAW</span> ICC illegal-action limit (measured in labs with 3D motion capture; a phone gives only a 2D screening estimate)</td><td>ICC Regulations for the Review of Bowlers Reported with Suspected Illegal Bowling Actions</td></tr>
+<tr><td>Bowling: straighter front knee at release</td><td><span class="badge warn">RESEARCH DIRECTION</span> More extended front knee at release associated with faster ball release in elite men (one of 4 predictors explaining 74% of speed variation). Not found in elite women (Felton 2015).</td><td><a href="https://dspace.lboro.ac.uk/2134/12151">Worthington, King &amp; Ranson 2013, J Appl Biomech 29(1):78–84</a></td></tr>
+<tr><td>Table tennis: trunk turn in forehand</td><td><span class="badge warn">RESEARCH DIRECTION</span> Advanced players get a larger share of racket speed from lower-trunk rotation than intermediates (p = 0.009).</td><td><a href="https://lida.sport-iat.de/ta/Record/4017158">Iino &amp; Kojima 2009, J Sports Sci</a></td></tr>
+<tr><td>Football: instep kick knee &amp; support leg</td><td><span class="badge warn">REVIEW</span> Instep kick is the most studied skill; exact ranges vary by study, so ours are starter values.</td><td><a href="https://typeset.io/papers/the-biomechanics-of-soccer-a-review-39heyp44ak">Lees &amp; Nolan 1998, J Sports Sci 16(3):211–234</a></td></tr>
+<tr><td>Batting: head over front knee, bent front knee</td><td><span class="badge">COACHING PRINCIPLE</span> Standard coaching cue; numeric range is our starter value, coach-adjustable.</td><td>Coaching manuals (not peer-reviewed)</td></tr>
+<tr><td>Phone pose accuracy</td><td><span class="badge warn">LIMIT</span> MediaPipe sagittal-plane angle errors of roughly 3–9° vs marker digitising in one cycling study; worse out of plane. Film side-on.</td><td><a href="https://www.frontiersin.org/articles/10.3389/fspor.2025.1712332/full">Frontiers in Sports 2025</a>; cycling validation study</td></tr>
+</tbody></table>
+<h3 style="margin-top:16px">What RallyIQ deliberately does not claim</h3>
+<ul class="tip"><li>It does not certify a bowling action as legal or illegal (that needs ICC-accredited 3D testing).</li><li>It does not predict or diagnose injury.</li><li>A difference from the range is a <b>flag to check with a coach</b>, not an automatic error. Your own best rep is the main benchmark.</li><li>Pose model: Google MediaPipe Pose Landmarker (lite), runs fully in the browser.</li></ul>
+</div></div>
+</main>
+
+<script type="module">
+import {PoseLandmarker,FilesetResolver,DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+// ---------- geometry ----------
+const P={nose:0,ls:11,rs:12,le:13,re:14,lw:15,rw:16,lh:23,rh:24,lk:25,rk:26,la:27,ra:28};
+const ang=(a,b,c)=>{const v1=[a.x-b.x,a.y-b.y],v2=[c.x-b.x,c.y-b.y];const d=(v1[0]*v2[0]+v1[1]*v2[1])/(Math.hypot(...v1)*Math.hypot(...v2)||1);return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI;};
+const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+const torsoLen=f=>Math.hypot(mid(f[P.ls],f[P.rs]).x-mid(f[P.lh],f[P.rh]).x,mid(f[P.ls],f[P.rs]).y-mid(f[P.lh],f[P.rh]).y)||1;
+function facing(f){const sh=mid(f[P.ls],f[P.rs]);return Math.sign(f[P.nose].x-sh.x)||1;}
+function lean(f){const sh=mid(f[P.ls],f[P.rs]),hp=mid(f[P.lh],f[P.rh]);const dx=(sh.x-hp.x)*facing(f),dy=hp.y-sh.y;return Math.atan2(dx,dy)*180/Math.PI;} // + = leaning forward
+const side=(h,dom)=>dom?(h==='R'?'r':'l'):(h==='R'?'l':'r'); // dom side vs other side
+const J=(f,n)=>f[P[n]];
+
+// ---------- sports: metrics measured at the key frame (peak speed of the tracked joint) ----------
+// ev: LAW | RESEARCH | COACH ; lo/hi = target band ; fn(frames, k, hand) -> value
+const SPORTS={
+ bowl:{label:"Cricket · Fast bowling (side-on)",track:h=>side(h,1)+'w',moment:"ball release",setup:"Film from the side, whole body in frame, about 6–8 m away. Bowl or shadow-bowl 5+ deliveries.",
+  m:[{id:"elbow",name:"Bowling-arm elbow extension",unit:"°",lo:0,hi:15,max:40,ev:"LAW",src:"ICC 15° limit (2D estimate)",
+      fn:(F,k,h)=>{const s=side(h,1);const a=F.slice(Math.max(0,k-12),k+1).map(f=>ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w')));return Math.max(0,a[a.length-1]-Math.min(...a));},
+      low:"",high:"Arm is straightening a lot near release. Get a coach or accredited lab to check the action.",drill:"Wall drill: bowl at a wall from 3 m with the arm kept at a constant bend, 3×10."},
+     {id:"fknee",name:"Front knee at release",unit:"°",lo:150,hi:180,max:180,minv:90,ev:"RESEARCH",src:"Worthington 2013: straighter = faster",
+      fn:(F,k,h)=>{const s=side(h,0),f=F[k];return ang(J(f,s+'h'),J(f,s+'k'),J(f,s+'a'));},
+      low:"Front knee is collapsing. Brace it: land and push up through a straighter front leg.",high:"",drill:"Bracing drill: step-and-plant onto the front foot, hold a straight front leg for 2 s, 3×8."},
+     {id:"lean",name:"Trunk forward lean at release",unit:"°",lo:10,hi:45,max:70,minv:-20,ev:"COACH",src:"Starter range, coach-adjustable",
+      fn:(F,k)=>lean(F[k]),low:"Falling back at release. Drive the chest towards the target.",high:"Bending over too much. Stay taller through release.",drill:"Follow-through drill: finish with chest over front knee, 3×8 slow deliveries."}]},
+ drive:{label:"Cricket · Front-foot drive",track:h=>side(h,0)+'w',moment:"bat contact",setup:"Film side-on from the off side, full body visible. Shadow-bat 5+ drives.",
+  m:[{id:"fknee",name:"Front knee bend",unit:"°",lo:120,hi:160,max:180,minv:80,ev:"COACH",src:"Coaching principle, starter range",
+      fn:(F,k,h)=>{const s=side(h,0),f=F[k];return ang(J(f,s+'h'),J(f,s+'k'),J(f,s+'a'));},low:"Front knee bent too much. Smaller stride.",high:"Front leg too straight. Bend the knee and get weight forward.",drill:"Front-foot lunge drive: big step, bent front knee, hold the finish 2 s, 3×10."},
+     {id:"head",name:"Head over front knee (gap)",unit:"%",lo:0,hi:35,max:100,ev:"COACH",src:"'Head over the ball' coaching cue",
+      fn:(F,k,h)=>{const s=side(h,0),f=F[k];return Math.abs(f[P.nose].x-J(f,s+'k').x)/torsoLen(f)*100;},low:"",high:"Head is behind the front knee. Lead with the head towards the ball.",drill:"Tennis-ball drop drill: partner drops a ball, you lean head over it before driving, 3×10."},
+     {id:"lean",name:"Trunk forward lean",unit:"°",lo:10,hi:35,max:60,minv:-20,ev:"COACH",src:"Starter range, coach-adjustable",fn:(F,k)=>lean(F[k]),low:"Leaning back. Ball will go in the air.",high:"Over-reaching forward.",drill:"Mirror shadow drives: freeze at contact and check the lean, 3×10."}]},
+ tt:{label:"Table tennis · Forehand",track:h=>side(h,1)+'w',moment:"ball contact",setup:"Film from the side of the table (or 45° front), full body visible. Play or shadow 5+ forehands.",
+  m:[{id:"elbow",name:"Playing elbow angle at contact",unit:"°",lo:90,hi:140,max:180,minv:40,ev:"COACH",src:"Coaching starter range",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'s'),J(f,s+'e'),J(f,s+'w'));},low:"Arm too cramped. Make more space from the body.",high:"Arm too straight. Keep a relaxed bend.",drill:"Shadow forehand with a towel under the arm-pit, 3×20."},
+     {id:"knees",name:"Knee bend (stance)",unit:"°",lo:130,hi:165,max:180,minv:90,ev:"COACH",src:"Athletic stance, starter range",
+      fn:(F,k)=>{const f=F[k];return (ang(f[P.lh],f[P.lk],f[P.la])+ang(f[P.rh],f[P.rk],f[P.ra]))/2;},low:"Too low; hard to move.",high:"Standing too upright. Bend the knees, weight on the balls of the feet.",drill:"Ready-stance side shuffles, 4×30 s."},
+     {id:"turn",name:"Trunk turn during stroke",unit:"%",lo:25,hi:120,max:150,ev:"RESEARCH",src:"Iino & Kojima 2009: trunk rotation drives racket speed",
+      fn:(F,k)=>{const w=F.slice(Math.max(0,k-15),Math.min(F.length,k+4)).map(f=>Math.abs(f[P.ls].x-f[P.rs].x)/torsoLen(f)*100);return Math.max(...w)-Math.min(...w);},low:"Arm-only stroke. Turn the waist and shoulders into the shot.",high:"",drill:"Hip-turn shadow strokes with a racket across the chest, 3×15."}]},
+ kick:{label:"Football · Instep kick",track:h=>side(h,1)+'a',moment:"ball contact",setup:"Film side-on, full body, ball in frame. Kick 5+ times.",
+  m:[{id:"sknee",name:"Support knee at contact",unit:"°",lo:130,hi:165,max:180,minv:90,ev:"COACH",src:"Starter range (Lees & Nolan 1998 review)",
+      fn:(F,k,h)=>{const s=side(h,0),f=F[k];return ang(J(f,s+'h'),J(f,s+'k'),J(f,s+'a'));},low:"Support leg too bent.",high:"Support leg locked straight. Soften the knee.",drill:"Plant-and-hold: plant support foot beside the ball, slight knee bend, 3×10."},
+     {id:"kknee",name:"Kicking knee at contact",unit:"°",lo:140,hi:180,max:180,minv:60,ev:"COACH",src:"Starter range (Lees & Nolan 1998 review)",
+      fn:(F,k,h)=>{const s=side(h,1),f=F[k];return ang(J(f,s+'h'),J(f,s+'k'),J(f,s+'a'));},low:"Knee still bent at contact. Snap the lower leg through the ball.",high:"",drill:"Wall passes focusing on full knee extension through contact, 3×15."},
+     {id:"lean",name:"Trunk lean",unit:"°",lo:0,hi:25,max:50,minv:-40,ev:"COACH",src:"'Over the ball' coaching cue",fn:(F,k)=>lean(F[k]),low:"Leaning back: ball will rise.",high:"Leaning too far forward.",drill:"Low-drive drill: chest over the ball, aim under the crossbar height, 3×10."}]}
+};
+const EV={LAW:["LAW","ok"],RESEARCH:["RESEARCH","warn"],COACH:["COACH",""]};
+
+// ---------- state ----------
+const $=id=>document.getElementById(id);
+const vid=$('vid'),cv=$('cv'),ctx=cv.getContext('2d');
+let pose,draw,running=false,src=null,stream=null,lastT=-1;
+let frames=[],thumbs=[],reps=[],seg=null,lastRep=-1e9,prevPt=null,prevTs=0,sp=0;
+const sel=$('sport');sel.innerHTML=Object.entries(SPORTS).map(([k,s])=>`<option value="${k}">${s.label}</option>`).join('');
+const S=()=>SPORTS[sel.value],H=()=>$('hand').value;
+function setup(){$('setup').textContent='Set-up: '+S().setup;renderLive(null);}
+sel.onchange=()=>{resetSession();setup();};$('hand').onchange=resetSession;
+const thumbC=Array.from({length:40},()=>{const c=document.createElement('canvas');c.width=320;c.height=200;return c;});let ti=0;
+
+// ---------- model ----------
+(async()=>{try{
+  const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  const opts=d=>({baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:d},runningMode:"VIDEO",numPoses:1});
+  try{pose=await PoseLandmarker.createFromOptions(fs,opts("GPU"));}catch(e){pose=await PoseLandmarker.createFromOptions(fs,opts("CPU"));}
+  draw=new DrawingUtils(ctx);$('st').textContent='Ready';$('cam').disabled=false;
+ }catch(e){$('st').textContent='Model failed to load: '+e.message;}})();
+setup();
+
+function resetSession(){frames=[];reps=[];seg=null;lastRep=-1e9;prevPt=null;$('reps').textContent='Reps 0';$('cue').textContent='';renderLive(null);}
+
+$('cam').onclick=async()=>{try{stopSrc();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:1280,height:720},audio:false});
+  vid.srcObject=stream;vid.src='';await vid.play();src='cam';resetSession();loop();$('st').textContent='LIVE';$('st').className='chip live';}
+  catch(e){$('st').textContent='Camera blocked: '+e.message;}};
+$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;stopSrc();vid.srcObject=null;vid.src=URL.createObjectURL(f);vid.loop=false;await vid.play();src='file';resetSession();loop();$('st').textContent='Analysing video';$('st').className='chip';};
+vid.onended=()=>{if(src==='file'){finish();}};
+$('stop').onclick=()=>finish();
+function stopSrc(){running=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}vid.pause();}
+
+// ---------- main loop ----------
+function loop(){running=true;const step=()=>{if(!running)return;
+  if(vid.readyState>=2&&vid.currentTime!==lastT){lastT=vid.currentTime;process(performance.now());}
+  requestAnimationFrame(step);};requestAnimationFrame(step);}
+
+function process(ts){
+  const W=vid.videoWidth,Hh=vid.videoHeight;if(!W)return;
+  if(cv.width!==W){cv.width=W;cv.height=Hh;}
+  ctx.drawImage(vid,0,0,W,Hh);
+  const r=pose.detectForVideo(vid,ts);const lm=r.landmarks&&r.landmarks[0];
+  if(!lm){$('conf').textContent='No athlete found';return;}
+  const f=lm.map(p=>({x:p.x*W,y:p.y*Hh,v:p.visibility??1}));f.t=ts;
+  draw.drawConnectors(lm,PoseLandmarker.POSE_CONNECTIONS,{color:'#C8F04A',lineWidth:Math.max(3,W/320)});
+  draw.drawLandmarks(lm,{color:'#4FD6E8',radius:Math.max(3,W/300),lineWidth:1});
+  const vis=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+f[i].v,0)/12;
+  $('conf').textContent='Tracking '+(vis>.8?'high':vis>.6?'medium':'low');
+  frames.push(f);if(frames.length>90)frames.shift();
+  const tc=thumbC[ti%40];tc.getContext('2d').drawImage(cv,0,0,320,200);f.th=tc;f.ti=ti;ti++;
+  // live angle labels on the joints that matter
+  const s=S(),h=H();
+  const live=s.m.map(m=>{try{return m.fn(frames,frames.length-1,h);}catch(e){return NaN;}});
+  labelJoints(f,s,h);
+  if(!reps.length)renderLive(live,true);
+  // rep detection: peak speed of tracked joint (torso-lengths per second)
+  const pt=f[P[s.track(h)]],tl=torsoLen(f);
+  if(prevPt){const dt=(ts-prevTs)/1000||.033;const v=Math.hypot(pt.x-prevPt.x,pt.y-prevPt.y)/tl/dt;sp=.6*sp+.4*v;}
+  prevPt=pt;prevTs=ts;
+  const thr=sel.value==='kick'?3:2.5;
+  if(sp>thr){if(!seg)seg={max:0,k:0};if(sp>seg.max){seg.max=sp;seg.k=frames.length-1;seg.f=f;}}
+  else if(seg&&sp<thr*.5){const k=frames.indexOf(seg.f);if(k>=0&&ts-lastRep>700)addRep(k);seg=null;}
+}
+function labelJoints(f,s,h){ctx.font=`700 ${Math.max(16,cv.width/45)}px "Barlow Condensed"`;
+  const pts={elbow:side(h,1)+'e',fknee:side(h,0)+'k',sknee:side(h,0)+'k',kknee:side(h,1)+'k',knees:'lk'};
+  s.m.forEach(m=>{const j=pts[m.id];if(!j)return;const p=f[P[j]];let v;
+    if(m.id==='elbow'){const d=side(h,1);v=ang(J(f,d+'s'),J(f,d+'e'),J(f,d+'w'));}else if(m.id==='knees')v=ang(f[P.lh],f[P.lk],f[P.la]);else v=m.fn([f],0,h);
+    const txt=Math.round(v)+'°';ctx.fillStyle='rgba(11,15,20,.8)';const w=ctx.measureText(txt).width;ctx.fillRect(p.x+10,p.y-24,w+12,28);ctx.fillStyle='#C8F04A';ctx.fillText(txt,p.x+16,p.y-3);});}
+
+function addRep(k){const s=S(),h=H(),f=frames[k];lastRep=f.t;
+  const vals=s.m.map(m=>{try{return m.fn(frames,k,h);}catch(e){return NaN;}});
+  const vis=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+f[i].v,0)/12;
+  const img=f.th.toDataURL('image/jpeg',.8);
+  const inR=vals.map((v,i)=>v>=s.m[i].lo&&v<=s.m[i].hi);
+  reps.push({vals,inR,vis,img,score:inR.filter(Boolean).length});
+  $('reps').textContent='Reps '+reps.length;renderLive(vals);
+  const bad=s.m.findIndex((m,i)=>!inR[i]);
+  const cue=bad<0?`Rep ${reps.length}: all checks in range. Repeat that.`:`Rep ${reps.length}: ${advice(s.m[bad],vals[bad])}`;
+  $('cue').textContent=cue;if($('voice').checked&&'speechSynthesis' in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(cue.replace(/°/g,' degrees')));}
+}
+function advice(m,v){const d=v<m.lo?Math.round(m.lo-v):Math.round(v-m.hi);const t=v<m.lo?m.low:m.high;return `${m.name} ${Math.round(v)}${m.unit}, ${d}${m.unit} ${v<m.lo?'below':'above'} target. ${t||''}`;}
+
+// ---------- rendering ----------
+function renderLive(vals,isLive){const s=S();$('metrics').innerHTML=s.m.map((m,i)=>{
+  const v=vals?vals[i]:NaN,mn=m.minv??0,span=m.max-mn,pos=x=>Math.max(0,Math.min(100,(x-mn)/span*100));
+  const ok=isFinite(v)&&v>=m.lo&&v<=m.hi,cls=!isFinite(v)?'':ok?'ok':'bad';
+  return `<div class="metric"><div><div class="name">${m.name}</div><div class="rng">Target ${m.lo}–${m.hi}${m.unit} at ${s.moment} · <span class="badge ${EV[m.ev][1]}">${EV[m.ev][0]}</span></div></div>
+  <div><div class="val ${cls}">${isFinite(v)?Math.round(v)+m.unit:'–'}</div><div class="src">${isLive?'live':'last rep'}</div></div>
+  <div class="bar"><div class="band" style="left:${pos(m.lo)}%;width:${pos(m.hi)-pos(m.lo)}%"></div>${isFinite(v)?`<div class="dot" style="left:${pos(v)}%"></div>`:''}</div>
+  <div class="src" style="grid-column:1/-1;text-align:left">${m.src}</div></div>`;}).join('');}
+
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,sd=a=>{const m=mean(a);return Math.sqrt(mean(a.map(x=>(x-m)**2)));};
+function finish(){stopSrc();$('st').textContent='Session finished';$('st').className='chip';
+  if(reps.length<2){$('reportBody').innerHTML='<p class="empty">Need at least 2 detected reps. Play full-speed shots with the whole body in frame, side-on.</p>';show('report');return;}
+  const s=S();const R=reps;
+  const per=s.m.map((m,i)=>{const a=R.map(r=>r.vals[i]).filter(isFinite);return{m,mean:mean(a),sd:sd(a),inPct:Math.round(R.filter(r=>r.inR[i]).length/R.length*100)};});
+  const match=Math.round(mean(per.map(p=>p.inPct)));
+  const cons=Math.round(mean(per.map(p=>Math.max(0,100-p.sd*4))));
+  const conf=mean(R.map(r=>r.vis));
+  const order=R.map((r,i)=>({r,i})).sort((a,b)=>b.r.score-a.r.score||b.r.vis-a.r.vis);
+  const best=order[0],worst=order[order.length-1];
+  const weakest=[...per].sort((a,b)=>a.inPct-b.inPct||b.sd-a.sd)[0];
+  const wrongDir=R.map(r=>r.vals[s.m.indexOf(weakest.m)]);const avg=mean(wrongDir);
+  const fix=avg<weakest.m.lo?weakest.m.low:weakest.m.high;
+  const html=`<h2>${s.label}: session report</h2>
+  <div class="stats"><div class="stat"><b>${R.length}</b><span>reps detected</span></div><div class="stat"><b>${match}%</b><span>checks in target range</span></div><div class="stat"><b>${cons}</b><span>consistency score /100</span></div></div>
+  <p class="tip">Tracking confidence: <b>${conf>.8?'high':conf>.6?'medium':'low, re-film side-on with full body visible'}</b>. Consistency = how much each angle varies rep to rep (score drops 4 points per degree of spread).</p>
+  <h3>Per-metric breakdown</h3><table><thead><tr><th>Metric</th><th>Target</th><th>Average</th><th>Spread (±)</th><th>In range</th><th>Evidence</th></tr></thead><tbody>
+  ${per.map(p=>`<tr><td>${p.m.name}</td><td>${p.m.lo}–${p.m.hi}${p.m.unit}</td><td class="mono">${Math.round(p.mean)}${p.m.unit}</td><td class="mono ${p.sd>8?'bad':p.sd>4?'warn':'ok'}">±${p.sd.toFixed(1)}</td><td class="mono">${p.inPct}%</td><td><span class="badge ${EV[p.m.ev][1]}">${EV[p.m.ev][0]}</span></td></tr>`).join('')}
+  </tbody></table>
+  <h3 style="margin-top:16px">Your best rep vs your worst rep</h3><p class="tip">Your own best rep is your benchmark: copy it.</p>
+  <div class="cmp"><figure class="best"><img alt="Best rep at ${s.moment}" src="${best.r.img}"><figcaption><b class="ok">Best: rep ${best.i+1}</b><br>${s.m.map((m,i)=>`${m.name}: ${Math.round(best.r.vals[i])}${m.unit}`).join('<br>')}</figcaption></figure>
+  <figure class="worst"><img alt="Worst rep at ${s.moment}" src="${worst.r.img}"><figcaption><b class="bad">Needs work: rep ${worst.i+1}</b><br>${s.m.map((m,i)=>`${m.name}: ${Math.round(worst.r.vals[i])}${m.unit}`).join('<br>')}</figcaption></figure></div>
+  <h3 style="margin-top:16px">Your #1 focus and drill</h3>
+  <div class="drill"><b>${weakest.m.name}</b>: average ${Math.round(avg)}${weakest.m.unit}, target ${weakest.m.lo}–${weakest.m.hi}${weakest.m.unit}, in range on ${weakest.inPct}% of reps. ${fix||'Work on repeating the same angle every rep.'}<br><b>Drill:</b> ${weakest.m.drill}<br><span class="tip">Then record another set and compare on the Progress tab.</span></div>
+  <h3 style="margin-top:16px">Every rep</h3><table><thead><tr><th>Rep</th>${s.m.map(m=>`<th>${m.name}</th>`).join('')}</tr></thead><tbody>${R.map((r,i)=>`<tr><td>${i+1}</td>${r.vals.map((v,j)=>`<td class="mono ${r.inR[j]?'ok':'bad'}">${Math.round(v)}${s.m[j].unit}</td>`).join('')}</tr>`).join('')}</tbody></table>
+  <p class="tip">A value outside the range is a flag to check with a coach, not an automatic error. Single-camera 2D angles carry a few degrees of error.</p>`;
+  $('reportBody').innerHTML=html;
+  try{const k='rallyiq-history';const hst=JSON.parse(localStorage.getItem(k)||'[]');hst.push({sport:sel.value,label:s.label,date:new Date().toISOString(),reps:R.length,match,cons,focus:weakest.m.name});localStorage.setItem(k,JSON.stringify(hst.slice(-50)));}catch(e){}
+  renderProgress();show('report');}
+
+function renderProgress(){let h=[];try{h=JSON.parse(localStorage.getItem('rallyiq-history')||'[]');}catch(e){}
+  if(!h.length){$('progBody').innerHTML='<h2>Progress</h2><p class="empty">Finish a session to start your development record. Stored only on this device.</p>';return;}
+  $('progBody').innerHTML='<h2>Progress</h2><p class="tip">Stored only on this device. Compare session 1 with session 2 after doing the drill.</p><table><thead><tr><th>Date</th><th>Movement</th><th>Reps</th><th>In range</th><th>Consistency</th><th>Change</th><th>Focus</th></tr></thead><tbody>'+
+  h.map((x,i)=>{const prev=h.slice(0,i).reverse().find(y=>y.sport===x.sport);const d=prev?x.match-prev.match:null;
+   return `<tr><td>${new Date(x.date).toLocaleString()}</td><td>${x.label}</td><td>${x.reps}</td><td class="mono">${x.match}%</td><td class="mono">${x.cons}</td><td class="mono ${d>0?'ok':d<0?'bad':''}">${d===null?'first':(d>0?'+':'')+d+' pts'}</td><td>${x.focus}</td></tr>`;}).reverse().join('')+'</tbody></table>';}
+renderProgress();
+
+function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelectorAll('.section').forEach(s=>s.hidden=s.id!==t);}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+</script>
+</body></html>
