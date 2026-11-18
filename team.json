@@ -1,9 +1,11 @@
 {
-  "team_name": "DawaCheck",
+  "team_name": "Team Gyarados",
   "project_title": "DawaCheck",
   "one_liner": "Checks a chemist's medicine stock, from one photo of a purchase bill, against every 2026 government alert for substandard or fake drug batches, and re-checks it when a new alert is published.",
   "track": "physical-world",
   "members": [
-    { "name": "Suman Saha", "github": "SahaSuman13" }
+    { "name": "Suman Saha", "github": "SahaSuman13" },
+    { "name": "Aman Kumar", "github": "" },
+    { "name": "Lakshya Toshniwal", "github": "" }
   ]
 }
