@@ -1,20 +1,20 @@
-﻿{
-    "team_name":  "Team Gyarados",
-    "project_title":  "RallyIQ",
-    "one_liner":  "Phone-camera technique coach for athletes without a coach: live skeleton and joint angles for cricket bowling/batting, table tennis and football, rep-by-rep consistency, research-labelled target ranges (ICC 15 degree law, Worthington 2013, Iino \u0026 Kojima 2009), best-vs-worst rep, drills and progress. Runs fully in the browser; video never leaves the phone.",
-    "track":  "physical-world",
-    "members":  [
-                    {
-                        "name":  "Suman Saha",
-                        "github":  "SahaSuman13"
-                    },
-                    {
-                        "name":  "Aman Kumar",
-                        "github":  ""
-                    },
-                    {
-                        "name":  "Lakshya Toshniwal",
-                        "github":  ""
-                    }
-                ]
+{
+  "team_name": "Team Gyarados",
+  "project_title": "RallyIQ",
+  "one_liner": "Phone-camera technique coach for athletes without a coach: live skeleton and joint angles for cricket bowling/batting, table tennis and football, rep-by-rep consistency, research-labelled target ranges (ICC 15 degree law, Worthington 2013, Iino & Kojima 2009), best-vs-worst rep, drills and progress. Runs fully in the browser; video never leaves the phone.",
+  "track": "physical-world",
+  "members": [
+    {
+      "name": "Suman Saha",
+      "github": "SahaSuman13"
+    },
+    {
+      "name": "Aman Kumar",
+      "github": ""
+    },
+    {
+      "name": "Lakshya Toshniwal",
+      "github": ""
+    }
+  ]
 }
