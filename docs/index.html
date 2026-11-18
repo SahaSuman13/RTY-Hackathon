@@ -327,6 +327,25 @@ function drillMsg(){const g=$('guide');g.hidden=false;g.className='guide drill';
   $('gbig').textContent=S().static?`Take your ready stance and hold 1 second`:`Play your ${shot.toLowerCase()} now`;
   if(n===0)say(S().static?'Take your ready stance and hold.':`Play your ${shot.toLowerCase()}.`);}
 
+// ---------- live voice + visual coach: corrects posture in real time ----------
+let lcLast=0,lcText='';
+const LC_JOINT={fknee:h=>side(h,0)+'k',sknee:h=>side(h,0)+'k',kknee:h=>side(h,1)+'k',knees:()=>'lk',elbow:h=>side(h,1)+'e',lean:()=>'ls',feet:()=>'la',hand:h=>side(h,1)+'w',head:()=>'nose'};
+const LC_SAY={fknee:['Bend the front knee less, brace it','Bend your front knee more'],sknee:['Straighten the support knee a little','Bend the support knee more'],kknee:['Extend the kicking knee','Soften the kicking knee'],
+ knees:['Stand up a little, too low','Bend your knees more'],elbow:['Open the elbow, more space from the body','Bend the elbow a little'],lean:['Lean forward more, chest over the ball','Stand taller, less bend'],
+ feet:['Widen your feet','Bring your feet closer'],hand:['Raise the racket hand to table height','Lower the racket hand'],head:['','Bring your head forward over the front knee']};
+function liveCoach(f,s,h,live,ts){if(!(armed||gPhase==='setup'))return;if(sp>1.2)return; // only coach while holding a position, not mid-swing
+  let worst=null;s.m.forEach((m,i)=>{const v=live[i];if(!LC_JOINT[m.id]||!isFinite(v)||(m.id==='elbow'&&sel.value==='bowl'))return;
+    const gap=v<m.lo?m.lo-v:v>m.hi?v-m.hi:0;if(gap>3&&(!worst||gap>worst.gap))worst={m,v,gap,low:v<m.lo};});
+  if(!worst){if(ts-lcLast>5000&&armed){lcText='Good position. Hold it.';lcLast=ts;say(lcText);}return;}
+  const j=f[P[LC_JOINT[worst.m.id](h)]];const up=worst.low; // value too low -> increase (open/straighten/raise), too high -> decrease
+  const txt=(LC_SAY[worst.m.id][worst.low?0:1]||worst.m.name)+` (${Math.round(worst.gap)}${worst.m.unit})`;
+  // amber arrow + bubble on the joint
+  const L=Math.max(40,cv.width/16),dir=up?-1:1;ctx.save();ctx.strokeStyle='#F59E0B';ctx.fillStyle='#F59E0B';ctx.lineWidth=Math.max(4,cv.width/220);ctx.shadowColor='#F59E0B';ctx.shadowBlur=12;
+  const x=j.x-L*.9,y0=j.y,y1=j.y+dir*L;ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();ctx.beginPath();ctx.moveTo(x,y1+dir*12);ctx.lineTo(x-10,y1-dir*4);ctx.lineTo(x+10,y1-dir*4);ctx.closePath();ctx.fill();
+  ctx.shadowBlur=0;const fs=Math.max(15,cv.width/55);ctx.font=`700 ${fs}px Poppins`;const w=ctx.measureText(txt).width;const bx=Math.max(8,Math.min(cv.width-w-24,x-w/2)),by=Math.max(fs+10,Math.min(cv.height-10,y1+dir*(fs+16)));
+  ctx.fillStyle='rgba(24,33,44,.92)';ctx.beginPath();ctx.roundRect(bx-10,by-fs-6,w+20,fs+16,10);ctx.fill();ctx.fillStyle='#FCD34D';ctx.fillText(txt,bx,by);ctx.restore();
+  if(ts-lcLast>3500||!lcText.startsWith(txt.split(' (')[0])){if(ts-lcLast>2500){lcText=txt;lcLast=ts;say(txt.replace(/\(.*\)/,'').replace(/°/g,' degrees'));if(armed)$('cue').textContent='Coach: '+txt;}}}
+
 // ---------- main loop ----------
 function loop(){running=true;document.body.classList.add('running');const step=()=>{if(!running)return;
   if(vid.readyState>=2&&vid.currentTime!==lastT){lastT=vid.currentTime;process(performance.now());}
@@ -356,6 +375,7 @@ function handle(lm,W,Hh,ts,wl){
   const s=S(),h=H();
   const live=s.m.map(m=>{try{return m.fn(frames,frames.length-1,h);}catch(e){return NaN;}});
   labelJoints(f,s,h);
+  liveCoach(f,s,h,live,ts);
   if(!reps.length)renderLive(live,true);
   // rep detection: peak speed of tracked joint (torso-lengths per second)
   const pt=f[P[s.track(h)]],tl=torsoLen(f);
