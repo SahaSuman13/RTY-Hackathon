@@ -1,8 +1,8 @@
 {
   "team_name": "Team Gyarados",
-  "project_title": "DawaCheck",
-  "one_liner": "Checks a chemist's medicine stock, from one photo of a purchase bill, against every 2026 government alert for substandard or fake drug batches, and re-checks it when a new alert is published.",
-  "track": "physical-world",
+  "project_title": "Sylveon",
+  "one_liner": "A therapist's own AI for the 7-10 days between sessions: it follows only what the therapist approved (route-map check-ins, flashcards, homework), never diagnoses or advises on medicine, escalates any crisis in English/Hindi/Hinglish, and hands the therapist a summary in the patient's own words.",
+  "track": "area-of-expertise",
   "members": [
     { "name": "Suman Saha", "github": "SahaSuman13" },
     { "name": "Aman Kumar", "github": "" },
