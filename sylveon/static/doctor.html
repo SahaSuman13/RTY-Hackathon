@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sylveon · Dr Kabir</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<div class="wrap">
+  <h1 style="margin-bottom:0">Dr Kabir · Sylveon dashboard</h1>
+  <p class="muted">Fictional demo doctor and patient. The AI drafts; the doctor decides.</p>
+  <div class="tabs"><button class="on" data-t="sum">Before Riya's next visit</button><button data-t="ai">My AI (sign-off)</button><button data-t="rt">Safety test</button><a href="/" style="margin-left:auto;align-self:center">Patient view →</a></div>
+
+  <section id="sum"></section>
+
+  <section id="ai" hidden>
+    <div class="card"><h3>Version <span id="ver"></span> · signed off <span id="when"></span></h3>
+      <p class="muted">Every change is a new version; old versions are kept for audit. The AI can only use what is signed off here.</p>
+      <label>Style<textarea id="style"></textarea></label>
+      <label>Approved notes (JSON)<textarea id="notes" style="min-height:140px"></textarea></label>
+      <label>Flashcards (JSON, the AI reads them word for word)<textarea id="cards" style="min-height:160px"></textarea></label>
+      <label>Homework (JSON)<textarea id="hw"></textarea></label>
+      <p><button id="sign">Sign off new version</button> <span id="signmsg" class="muted"></span></p>
+    </div>
+  </section>
+
+  <section id="rt" hidden>
+    <div class="card"><p>Runs 30 test messages written by our team (crisis in English, Hindi and Hinglish, including hidden signals; medicine, diagnosis and impersonation requests; everyday messages that must <b>not</b> raise an alarm). With an AI key, the same crisis messages also go to a plain AI with no Sylveon layers, for comparison.</p>
+      <button id="run">Run safety test</button> <span id="rtmsg" class="muted"></span></div>
+    <div id="rtout"></div>
+  </section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));['sum','ai','rt'].forEach(s=>$(s).hidden=s!==b.dataset.t);if(b.dataset.t==='sum')loadSum();};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tm=ts=>new Date(ts*1000).toLocaleString();
+async function loadSum(){const s=await (await fetch('/api/summary/riya')).json();
+  $('sum').innerHTML=`
+  <div class="grid">
+   <div class="card stat ${s.flags.length?'bad':'good'}"><b>${s.flags.length}</b>risk alerts</div>
+   <div class="card stat"><b>${s.checkins.length}</b>route-map check-ins</div>
+   <div class="card stat"><b>${s.flashcards_used}</b>flashcards completed</div>
+   <div class="card stat"><b>${s.saved_questions.length}</b>questions saved for you</div></div>
+  ${s.flags.map(f=>`<div class="card flag"><b>Risk: ${f.level.toUpperCase()}</b> · ${tm(f.ts)}<br>“${esc(f.text)}”<br><span class="muted">Helpline shown: ${esc(f.helpline)} · you were alerted: ${f.doctor_alerted?'yes':'no'}</span></div>`).join('')}
+  <div class="card"><h3>Check-ins, in Riya's own words</h3>${s.checkins.length?s.checkins.map(c=>`<table class="list">${Object.entries(c).map(([k,v])=>`<tr><th>${k.replace('_',' ')}</th><td>“${esc(v)}”</td></tr>`).join('')}</table>`).join('<hr>'):'<p class="muted">None yet.</p>'}</div>
+  <div class="card"><h3>Questions only you can answer</h3>${s.saved_questions.length?'<table class="list">'+s.saved_questions.map(q=>`<tr><td>${esc(q.topic)}</td><td>“${esc(q.text)}”</td><td class="muted">${tm(q.ts)}</td></tr>`).join('')+'</table>':'<p class="muted">None.</p>'}</div>
+  <div class="card"><h3>Homework</h3>${s.homework.length?s.homework.map(h=>`<p>${h.done?'Done':'Mentioned'}: “${esc(h.text)}”</p>`).join(''):'<p class="muted">No homework messages yet.</p>'}</div>`;}
+async function loadAI(){const d=(await (await fetch('/api/doctor/dr-kabir')).json()).doctor;$('ver').textContent=d.version;$('when').textContent=d.signed_off_at?tm(d.signed_off_at):'';
+  $('style').value=d.style;$('notes').value=JSON.stringify(d.approved_notes,null,1);$('cards').value=JSON.stringify(d.flashcards,null,1);$('hw').value=JSON.stringify(d.homework,null,1);}
+$('sign').onclick=async()=>{try{const body={style:$('style').value,approved_notes:JSON.parse($('notes').value),flashcards:JSON.parse($('cards').value),homework:JSON.parse($('hw').value)};
+  const r=await (await fetch('/api/doctor/dr-kabir/signoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();$('signmsg').textContent='Signed off as version '+r.version;loadAI();}
+  catch(e){$('signmsg').textContent='Not saved: check the JSON ('+e.message+')';}};
+$('run').onclick=async()=>{$('rtmsg').textContent='Running…';const r=await (await fetch('/api/redteam',{method:'POST'})).json();$('rtmsg').textContent='Ran at '+r.ran_at+(r.llm_enabled?' · AI risk check on':' · phrase layer only (no AI key)');
+  const st=(n,x,good)=>`<div class="card stat ${x.passed===x.total?'good':'bad'}"><b>${x.passed}/${x.total}</b>${n}</div>`;
+  $('rtout').innerHTML=`<div class="grid">${st('crisis messages routed to crisis help',r.crisis_recall)}${st('medicine / diagnosis / impersonation declined',r.blocked_accuracy)}${st('everyday messages with no false alarm',r.no_false_alarm)}
+   ${r.baseline_crisis_help?`<div class="card stat ${r.baseline_crisis_help.passed===r.baseline_crisis_help.total?'good':'bad'}"><b>${r.baseline_crisis_help.passed}/${r.baseline_crisis_help.total}</b>plain AI pointed the person to real help</div>`:'<div class="card stat"><b>—</b>plain-AI baseline needs an AI key</div>'}</div>
+   <div class="card"><table class="list"><tr><th>Expected</th><th>Message</th><th>Sylveon</th><th>Result</th>${r.baseline_crisis_help?'<th>Plain AI reply</th>':''}</tr>
+   ${r.rows.map(x=>`<tr><td>${x.expected}</td><td>${esc(x.message)}</td><td>${x.got} <span class="muted">(${x.phrase_level}/${x.llm_level??'off'})</span></td><td><span class="pill ${x.pass?'pass':'fail'}">${x.pass?'PASS':'FAIL'}</span></td>${r.baseline_crisis_help?`<td class="muted">${x.baseline_reply?esc(x.baseline_reply.slice(0,140))+(x.baseline_points_to_help?' ✓help':' ✗no help'):''}</td>`:''}</tr>`).join('')}</table>
+   <p class="muted">Test messages were written by our team, not real patients. The phrase list and the test set come from the same people, so treat 100% as optimistic until tested on unseen messages.</p></div>`;};
+loadSum();loadAI();
+</script></body></html>

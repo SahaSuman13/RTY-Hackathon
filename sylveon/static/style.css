@@ -1,0 +1,33 @@
+:root{--bg:#F6F4F1;--panel:#FFFFFF;--ink:#1D2433;--muted:#5B6474;--line:#E2DED7;--accent:#6B4FBB;--me:#E9E3FA;--ai:#FFFFFF;--crisis:#B42318;--crisis-bg:#FDECEA;--ok:#1E7A4C;--warn:#A15C00}
+@media (prefers-color-scheme:dark){:root{--bg:#14161C;--panel:#1C1F27;--ink:#E8E9EE;--muted:#A3A9B6;--line:#2C303B;--accent:#A993F0;--me:#2E2848;--ai:#232733;--crisis:#FF8A80;--crisis-bg:#3A1C1C;--ok:#6FD3A0;--warn:#F2B866}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--accent)}.muted{color:var(--muted);font-size:14px}
+.split{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:24px;max-width:1100px;margin:24px auto;padding:0 16px}
+@media (max-width:800px){.split{grid-template-columns:1fr}}
+.phone{background:var(--panel);border:1px solid var(--line);border-radius:24px;display:flex;flex-direction:column;height:86vh;overflow:hidden}
+.ph-head{display:flex;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.ph-head small{display:block;color:var(--muted);font-size:12px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700}
+.chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:85%;padding:10px 12px;border-radius:14px;line-height:1.4;font-size:15px;white-space:pre-wrap}
+.msg.me{align-self:flex-end;background:var(--me)}.msg.ai{align-self:flex-start;background:var(--ai);border:1px solid var(--line)}
+.msg.crisis{background:var(--crisis-bg);border:2px solid var(--crisis)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-top:1px solid var(--line)}
+.chips button{white-space:nowrap;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
+.composer{display:flex;gap:8px;padding:10px 12px}.composer input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
+button{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+.crisis-foot{margin:0;padding:8px 12px 12px;font-size:12px;color:var(--muted);text-align:center}
+.behind{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px}
+.behind h2{margin:0 0 4px}.trace table{width:100%;border-collapse:collapse;font-size:14px}
+.trace th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px 6px 0;width:40%}.trace td{padding:6px 0;font-family:ui-monospace,Consolas,monospace}
+.risk-high,.risk-medium{color:var(--crisis);font-weight:700}.risk-low{color:var(--warn);font-weight:700}.risk-none{color:var(--ok)}
+.steps{padding-left:20px}.steps li{padding:4px 6px;border-radius:8px;color:var(--muted)}.steps li.on{background:var(--me);color:var(--ink);font-weight:700}
+.wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+.tabs{display:flex;gap:8px;margin:12px 0}.tabs button{background:var(--panel);color:var(--ink);border:1px solid var(--line)}.tabs button.on{background:var(--accent);color:#fff}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.stat b{display:block;font-size:34px}.stat.bad b{color:var(--crisis)}.stat.good b{color:var(--ok)}
+textarea{width:100%;min-height:90px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px;font:14px ui-monospace,Consolas,monospace}
+table.list{width:100%;border-collapse:collapse;font-size:14px}table.list td,table.list th{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}.pill.pass{background:#DFF3E8;color:#14532D}.pill.fail{background:#FDECEA;color:#7A1A12}
+.flag{border-left:4px solid var(--crisis)}

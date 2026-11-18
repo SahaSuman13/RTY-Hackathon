@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sylveon · Riya</title>
+<link rel="stylesheet" href="/static/style.css">
+</head><body>
+<div class="split">
+  <section class="phone">
+    <header class="ph-head">
+      <div class="avatar">K</div>
+      <div><b>Dr Kabir's AI</b><small>Between-session helper · always an AI, never the doctor</small></div>
+    </header>
+    <div id="chat" class="chat" aria-live="polite"></div>
+    <div class="chips" id="chips"></div>
+    <form id="f" class="composer">
+      <input id="t" autocomplete="off" placeholder="Type in English or Hinglish…" aria-label="Message">
+      <button>Send</button>
+    </form>
+    <p class="crisis-foot">In danger right now? <b>Tele-MANAS 14416</b>, free, 24x7. Always free in Sylveon.</p>
+  </section>
+  <aside class="behind">
+    <h2>Behind the reply</h2>
+    <p class="muted">What the code decided. The AI never chooses the step; it only writes the wording.</p>
+    <div id="trace" class="trace"><p class="muted">Send a message to see the route map, safety check and wording source.</p></div>
+    <h3>Route map</h3>
+    <ol id="steps" class="steps"><li data-s="what_happened">What happened</li><li data-s="trigger">Trigger</li><li data-s="feeling_body">Feeling + body</li><li data-s="need">Need underneath</li><li data-s="coping">Usual coping</li><li data-s="next_step">Healthier next step</li></ol>
+    <p class="muted" id="llm"></p>
+    <p><a href="/doctor">Open Dr Kabir's dashboard →</a></p>
+  </aside>
+</div>
+<script>
+const chat=document.getElementById('chat'), t=document.getElementById('t');
+const chips=["he hasn't replied for 5 hours and I'm spiralling again","ok","aaj mock test mein bahut kharab gaya yaar","can I stop taking my sertraline?","are you the real doctor?","sab khatam karna hai yaar, kal ke baad koi problem nahi rahegi"];
+document.getElementById('chips').innerHTML=chips.map(c=>`<button type="button">${c}</button>`).join('');
+document.getElementById('chips').onclick=e=>{if(e.target.tagName==='BUTTON'){t.value=e.target.textContent;send();}};
+fetch('/api/status').then(r=>r.json()).then(s=>document.getElementById('llm').textContent=s.llm?`Wording: ${s.model} (rewrites only, every reply filtered)`:'Wording: safe templates (no AI key set)');
+function bubble(text,who,meta){const d=document.createElement('div');d.className='msg '+who+(meta&&meta.path==='crisis'?' crisis':'');d.textContent=text;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
+function trace(m){
+  const rows=[['Path',m.path],['Risk (final)',m.risk],['Phrase check',m.phrase_level],['AI risk check',m.llm_level??'off'],['Blocked topic',m.blocked??'—'],['Wording',m.wording]];
+  if(m.doctor_alerted)rows.push(['Doctor alerted','yes']);
+  document.getElementById('trace').innerHTML='<table>'+rows.map(([k,v])=>`<tr><th>${k}</th><td class="${k.startsWith('Risk')?'risk-'+v:''}">${v}</td></tr>`).join('')+'</table>';
+  const step=(m.path||'').split(':')[1];
+  document.querySelectorAll('#steps li').forEach(li=>li.classList.toggle('on',li.dataset.s===step));
+}
+async function send(){const text=t.value.trim();if(!text)return;t.value='';bubble(text,'me');
+  try{const r=await fetch('/api/chat/riya',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(!r.ok)throw new Error(r.status);const j=await r.json();bubble(j.reply,'ai',j.meta);trace(j.meta);}
+  catch(e){bubble('Connection problem. If you are in danger, call Tele-MANAS 14416 now.','ai',{path:'crisis'});}}
+document.getElementById('f').onsubmit=e=>{e.preventDefault();send();};
+fetch('/api/history/riya').then(r=>r.json()).then(h=>h.forEach(m=>bubble(m.text,m.sender==='patient'?'me':'ai',m.meta)));
+</script>
+</body></html>
